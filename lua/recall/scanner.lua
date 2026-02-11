@@ -133,7 +133,9 @@ end
 
 --- Clear the file cache
 function M.clear_cache()
-  cache = {}
+  for k in pairs(cache) do
+    cache[k] = nil
+  end
 end
 
 return M

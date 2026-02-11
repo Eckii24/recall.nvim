@@ -58,7 +58,7 @@ local function render_answer(buf, session)
   table.insert(lines, "")
 
   -- Add answer
-  for answer_line in card.answer:gmatch("[^\n]*") do
+  for _, answer_line in ipairs(vim.split(card.answer, "\n", { plain = true })) do
     table.insert(lines, "  " .. answer_line)
   end
 

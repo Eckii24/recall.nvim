@@ -54,7 +54,8 @@ function M.schedule(card_state, rating)
   ease = math.max(1.3, ease)
 
   -- Calculate due date
-  local today = os.time({ year = tonumber(os.date("%Y")), month = tonumber(os.date("%m")), day = tonumber(os.date("%d")), hour = 0 })
+  local d = os.date("*t")
+  local today = os.time({ year = d.year, month = d.month, day = d.day, hour = 0 })
   local due_time = today + (interval * 86400)
   local due = os.date("%Y-%m-%d", due_time)
 

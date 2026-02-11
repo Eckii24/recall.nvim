@@ -23,7 +23,7 @@ function M.new_session(deck)
   end
 
   -- Shuffle the queue (Fisher-Yates)
-  math.randomseed(os.time())
+  math.randomseed(os.time() + os.clock() * 1000)
   for i = #queue, 2, -1 do
     local j = math.random(1, i)
     queue[i], queue[j] = queue[j], queue[i]
