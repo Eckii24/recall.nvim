@@ -1,0 +1,126 @@
+*recall.txt*    Markdown-based spaced repetition for Neovim
+
+==============================================================================
+CONTENTS                                                     *recall-contents*
+
+  1. Introduction ................ |recall-introduction|
+  2. Requirements ................ |recall-requirements|
+  3. Setup ....................... |recall-setup|
+  4. Configuration ............... |recall-configuration|
+  5. Card Format ................. |recall-card-format|
+  6. Commands .................... |recall-commands|
+  7. Review Keymaps .............. |recall-keymaps|
+  8. Algorithm ................... |recall-algorithm|
+  9. Health Check ................ |recall-health|
+
+==============================================================================
+1. INTRODUCTION                                          *recall-introduction*
+
+recall.nvim is a Neovim plugin that lets you define flashcards as markdown
+headings and review them using the SM-2 spaced repetition algorithm. All
+scheduling data is stored in sidecar `.flashcards.json` files — your markdown
+files are never modified.
+
+==============================================================================
+2. REQUIREMENTS                                          *recall-requirements*
+
+- Neovim >= 0.11
+- snacks.nvim (https://github.com/folke/snacks.nvim)
+
+==============================================================================
+3. SETUP                                                      *recall-setup*
+
+Using lazy.nvim: >lua
+  {
+    "Eckii24/recall.nvim",
+    dependencies = { "folke/snacks.nvim" },
+    config = function()
+      require("recall").setup({})
+    end,
+  }
+<
+
+==============================================================================
+4. CONFIGURATION                                      *recall-configuration*
+
+                                                           *recall.setup()*
+`require("recall").setup(opts)`
+
+All options with defaults: >lua
+  {
+    dirs = {},                    -- directories to scan
+    auto_mode = false,            -- all headings become cards
+    min_heading_level = 2,        -- minimum heading level (auto mode)
+    review_mode = "float",        -- "float" or "split"
+    rating_keys = {
+      again = "1",
+      hard  = "2",
+      good  = "3",
+      easy  = "4",
+    },
+    show_answer_key = "<Space>",  -- reveal answer
+    quit_key = "q",               -- quit review
+    initial_ease = 2.5,           -- SM-2 initial ease factor
+    sidecar_filename = ".flashcards.json",
+  }
+<
+
+==============================================================================
+5. CARD FORMAT                                          *recall-card-format*
+
+Tagged Mode (default):~
+
+Add `#flashcard` to any heading: >markdown
+  ## What is Neovim? #flashcard
+
+  A hyperextensible Vim-based text editor.
+<
+
+Auto Mode:~
+
+Set `auto_mode = true` — every heading at or below `min_heading_level`
+becomes a card automatically.
+
+==============================================================================
+6. COMMANDS                                                *recall-commands*
+
+                                                        *:Recall*
+:Recall review             Open deck picker, select a deck to review
+:Recall review .           Scan cwd and start review
+:Recall review {deck}      Review a specific deck by name
+:Recall review --dir={p}   Scan specific directory
+:Recall stats              Show learning statistics
+:Recall scan               Scan and report card counts
+
+==============================================================================
+7. REVIEW KEYMAPS                                        *recall-keymaps*
+
+During review:
+
+  <Space>    Show answer
+  1          Again (complete lapse)
+  2          Hard (incorrect but close)
+  3          Good (correct with difficulty)
+  4          Easy (perfect recall)
+  q          Quit review
+
+==============================================================================
+8. ALGORITHM                                            *recall-algorithm*
+
+SM-2 with Anki-style ratings:
+
+  Again (q=0): Reset interval to 1, reset reps
+  Hard  (q=2): Reset interval to 1, reset reps
+  Good  (q=3): Progress: 1 → 6 → interval*ease
+  Easy  (q=5): Progress with ease bonus
+
+Ease factor: `EF' = EF + (0.1 - (5-q)*(0.08 + (5-q)*0.02))`
+Minimum ease: 1.3
+
+==============================================================================
+9. HEALTH CHECK                                            *recall-health*
+
+Run `:checkhealth recall` to verify your setup.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
