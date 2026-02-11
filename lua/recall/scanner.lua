@@ -5,6 +5,8 @@ local storage = require("recall.storage")
 local scheduler = require("recall.scheduler")
 local config = require("recall.config")
 
+local uv = vim.uv or vim.loop
+
 ---@class RecallCardWithState
 ---@field question string
 ---@field answer string
@@ -37,7 +39,7 @@ function M.scan_file(filepath, opts)
   local min_heading_level = opts.min_heading_level or config.opts.min_heading_level or 2
 
   -- Check mtime for caching
-  local stat = vim.uv.fs_stat(filepath)
+  local stat = uv.fs_stat(filepath)
   local mtime = stat and stat.mtime and stat.mtime.sec or 0
 
   local parsed_cards
