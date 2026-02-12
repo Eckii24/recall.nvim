@@ -1027,7 +1027,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 7. Floating Window Review UI
+- [x] 7. Floating Window Review UI
 
   **What to do**:
   - Implement `lua/recall/ui/float.lua`

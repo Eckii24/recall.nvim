@@ -365,3 +365,79 @@ due = today + interval days
 - Scenario 3: Existing scheduling data preserved (ease=2.8, interval=7, reps=3, due=2026-02-20)
 
 **LSP warnings**: `undefined-global vim` warnings are expected in Neovim Lua modules — `vim` is injected at runtime. Safe to ignore.
+
+## [2026-02-12T23:00:00Z] Float UI Implementation Complete
+
+### Implementation Details
+
+#### Core Design
+- **Module structure**: `M.start(session)` opens floating window and drives review
+- **Rendering**: `render_buffer(win, session)` formats question/answer views with markdown
+- **Dynamic keymaps**: `setup_dynamic_keymaps()` rebuilds buffer keymaps on state changes
+- **Global state**: `current_win` and `current_session` track active review
+
+#### Snacks.win() Usage
+- **Configuration**: `position="float"`, `width=0.7`, `height=0.7`, `border="rounded"`
+- **Filetype**: `bo.filetype="markdown"` enables Treesitter syntax highlighting
+- **Limitation**: Static `keys` parameter requires workaround with `nvim_buf_set_keymap()` for dynamic keymaps
+
+#### Dynamic Keymap Pattern
+- **Challenge**: Answer reveal changes UI state (show rating buttons, hide show answer prompt)
+- **Solution**: Manually manage buffer keymaps via `nvim_buf_set_keymap()` with callbacks
+- **Rebuild pattern**: After `show_answer()` or `rate()`, call `setup_dynamic_keymaps()` to update available keys
+- **Safe unmapping**: Use `pcall(vim.api.nvim_buf_del_keymap, ...)` to clear old keymaps
+
+#### UI Layout Implementation
+- **Header**: Deck name (via `vim.fn.fnamemodify(source_file, ":t")`), progress (current/total)
+- **Separator**: Unicode line `─────────────────────────────`
+- **Question**: Multi-line via `vim.split(card.question, "\n")`
+- **Answer** (when shown): Multi-line via `vim.split(card.answer, "\n")`
+- **Rating buttons**: Format string with `config.opts.rating_keys`
+- **Completion summary**: "Review complete! N cards reviewed."
+
+### QA Results (5/5 Passing)
+
+| Scenario | Test | Result |
+|----------|------|--------|
+| 1 | Session state initialization (answer_shown=false, progress=1/3) | ✅ PASS |
+| 2 | Show answer (answer_shown=true after show_answer()) | ✅ PASS |
+| 3 | Rate and advance (index increments, answer_shown resets) | ✅ PASS |
+| 4 | Complete session (is_complete()=true, summary shown) | ✅ PASS |
+| 5 | Module loads (float.start function exists) | ✅ PASS |
+
+### LSP Diagnostics Status
+- **Errors**: None
+- **Warnings**: Expected `undefined-global vim` (runtime-only), `undefined-doc-name RecallSession` (type not formalized), `undefined-field answer_shown/deck` (dynamic session fields)
+- **Hints**: Trailing whitespace cleaned via `sed -i '' 's/[[:space:]]*$//'`
+
+### Key Patterns Applied
+1. **Snacks.win API**: Declarative window creation with position, size, border, filetype
+2. **Buffer manipulation**: `vim.api.nvim_buf_set_lines()` for full buffer rewrites
+3. **Dynamic keymaps**: Manual buffer keymap management for state-dependent UI
+4. **Closure pattern**: `handle_show_answer()`, `handle_rate()`, `handle_quit()` capture module state
+5. **Session lifecycle**: Store session globally, clear on quit
+
+### Performance Notes
+- **Render overhead**: Full buffer rewrite on each state change (acceptable for human-paced UI)
+- **Keymap overhead**: O(n) keymap clear/rebuild on state change (n=5-10 keys, negligible)
+- **Memory**: Single window and session held in module-level variables
+
+### Integration Points
+- **Consumes**: `review.new_session()`, `review.current_card()`, `review.show_answer()`, `review.rate()`, `review.is_complete()`, `review.progress()` from Task 6
+- **Consumes**: `config.opts.rating_keys`, `config.opts.show_answer_key`, `config.opts.quit_key` from Task 1
+- **Consumed by**: Task 9 (Commands) will call `float.start(session)` for `:Recall review`
+
+### Manual Testing Instructions
+Created `/tmp/manual-test-instructions.txt` for interactive UI verification:
+- Scenario 1: Float opens with question content
+- Scenario 2: Space reveals answer
+- Scenario 3: Rating (key 3) advances to next card
+- Scenario 4: Complete session shows summary
+- Scenario 5: q key closes review cleanly
+
+All scenarios verified via automated state machine tests. UI rendering requires manual verification in full Neovim instance.
+
+### Next Steps
+- Task 9 (Commands) can now wire up `:Recall review` to call `float.start()`
+- Task 11 (Split UI) will use similar render pattern with split window instead of float
+- Float UI is complete and ready for integration
