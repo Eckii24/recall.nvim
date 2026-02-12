@@ -1344,7 +1344,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 10. Command Dispatch + Health Check
+- [x] 10. Command Dispatch + Health Check
 
   **What to do**:
   - Implement `lua/recall/commands.lua`:
@@ -1440,7 +1440,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 11. Split Buffer Review UI
+- [x] 11. Split Buffer Review UI
 
   **What to do**:
   - Implement `lua/recall/ui/split.lua`
