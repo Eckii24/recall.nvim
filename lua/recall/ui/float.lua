@@ -25,7 +25,9 @@ local function render_buffer(win, session)
     table.insert(lines, "  Press any key to close.")
     table.insert(lines, "")
 
+    vim.bo[win.buf].modifiable = true
     vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, lines)
+    vim.bo[win.buf].modifiable = false
     return
   end
 
@@ -35,12 +37,14 @@ local function render_buffer(win, session)
     table.insert(lines, "")
     table.insert(lines, "  No cards to review.")
     table.insert(lines, "")
+    vim.bo[win.buf].modifiable = true
     vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, lines)
+    vim.bo[win.buf].modifiable = false
     return
   end
 
   local prog = review.progress(session)
-  local deck_name = vim.fn.fnamemodify(session.deck.source_file, ":t")
+  local deck_name = vim.fn.fnamemodify(session.deck.filepath, ":t")
 
   -- Header
   table.insert(lines, "")
@@ -80,7 +84,9 @@ local function render_buffer(win, session)
     table.insert(lines, "")
   end
 
+  vim.bo[win.buf].modifiable = true
   vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, lines)
+  vim.bo[win.buf].modifiable = false
 end
 
 --- Handle showing the answer

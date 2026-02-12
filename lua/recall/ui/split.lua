@@ -44,7 +44,7 @@ local function render_buffer(buf, session)
   end
 
   local prog = review.progress(session)
-  local deck_name = vim.fn.fnamemodify(session.deck.source_file, ":t")
+  local deck_name = vim.fn.fnamemodify(session.deck.filepath, ":t")
 
   -- Header
   table.insert(lines, "")
