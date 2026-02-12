@@ -1,1 +1,5 @@
+# Sidecar data files (user-generated)
 .flashcards.json
+
+# Generated help tags
+doc/tags
