@@ -109,42 +109,32 @@ function M.compute(decks)
   return stats
 end
 
---- Display statistics in a floating window or notification
---- @param stats RecallStats Statistics to display
+--- @param stats RecallStats
 function M.display(stats)
   local lines = {}
 
-  -- Header
-  table.insert(lines, "📊 recall.nvim Statistics")
-  table.insert(lines, "─────────────────────────")
+  table.insert(lines, "# Statistics")
+  table.insert(lines, "")
+  table.insert(lines, "| Metric | Count |")
+  table.insert(lines, "|--------|-------|")
+  table.insert(lines, "| Total cards | " .. stats.total_cards .. " |")
+  table.insert(lines, "| Due today | " .. stats.due_today .. " |")
+  table.insert(lines, "| New cards | " .. stats.new_cards .. " |")
+  table.insert(lines, "| Reviewed today | " .. stats.reviewed_today .. " |")
+  table.insert(lines, "| Mature (>21d) | " .. stats.mature_cards .. " |")
+  table.insert(lines, "| Young (1-21d) | " .. stats.young_cards .. " |")
 
-  -- Main stats
-  table.insert(lines, string.format("Total cards:     %d", stats.total_cards))
-  table.insert(lines, string.format("Due today:       %d", stats.due_today))
-  table.insert(lines, string.format("New cards:       %d", stats.new_cards))
-  table.insert(lines, string.format("Reviewed today:  %d", stats.reviewed_today))
-  table.insert(lines, "─────────────────────────")
-  table.insert(lines, string.format("Mature (>21d):   %d", stats.mature_cards))
-  table.insert(lines, string.format("Young (1-21d):   %d", stats.young_cards))
-
-  -- Decks summary
   if #stats.decks_summary > 0 then
     table.insert(lines, "")
-    table.insert(lines, "Decks:")
+    table.insert(lines, "## Decks")
+    table.insert(lines, "")
+    table.insert(lines, "| Deck | Due | Total |")
+    table.insert(lines, "|------|-----|-------|")
     for _, deck_summary in ipairs(stats.decks_summary) do
-      table.insert(
-        lines,
-        string.format(
-          "  %s    [%d due / %d total]",
-          deck_summary.name,
-          deck_summary.due,
-          deck_summary.total
-        )
-      )
+      table.insert(lines, "| " .. deck_summary.name .. " | " .. deck_summary.due .. " | " .. deck_summary.total .. " |")
     end
   end
 
-  -- Try to use Snacks.win if available, fallback to vim.notify
   local ok, Snacks = pcall(require, "snacks")
   if ok and Snacks.win then
     local win = Snacks.win({
@@ -154,14 +144,30 @@ function M.display(stats)
       border = "rounded",
       title = " Statistics ",
       title_pos = "center",
+      backdrop = 60,
+      fixbuf = true,
+      bo = {
+        filetype = "markdown",
+        modifiable = false,
+        buftype = "nofile",
+      },
+      wo = {
+        conceallevel = 2,
+        wrap = true,
+        cursorline = false,
+        signcolumn = "no",
+        winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder,FloatTitle:RecallTitle",
+      },
+      keys = {
+        q = "close",
+        ["<Esc>"] = "close",
+      },
     })
 
     vim.bo[win.buf].modifiable = true
     vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, lines)
     vim.bo[win.buf].modifiable = false
-    vim.bo[win.buf].filetype = "markdown"
   else
-    -- Fallback to vim.notify
     local message = table.concat(lines, "\n")
     vim.notify(message, vim.log.levels.INFO)
   end
