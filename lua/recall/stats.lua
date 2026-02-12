@@ -2,6 +2,9 @@ local M = {}
 
 local scheduler = require("recall.scheduler")
 
+---@class RecallCardWithState
+---@field state table { ease: number, interval: integer, reps: integer, due: string }
+
 ---@class RecallStats
 ---@field total_cards integer
 ---@field due_today integer
@@ -39,22 +42,22 @@ function M.deck_stats(deck)
     stats.total = stats.total + 1
 
     -- Count due cards
-    if scheduler.is_due(card) then
+    if scheduler.is_due(card.state) then
       stats.due = stats.due + 1
     end
 
     -- Count new cards (never reviewed)
-    if card.reps == 0 then
+    if card.state.reps == 0 then
       stats.new_cards = stats.new_cards + 1
     end
 
     -- Count mature cards (interval > 21 days)
-    if card.interval > 21 then
+    if card.state.interval > 21 then
       stats.mature_cards = stats.mature_cards + 1
     end
 
     -- Count young cards (interval 1-21 days)
-    if card.interval >= 1 and card.interval <= 21 then
+    if card.state.interval >= 1 and card.state.interval <= 21 then
       stats.young_cards = stats.young_cards + 1
     end
   end
@@ -90,7 +93,7 @@ function M.compute(decks)
 
     -- Count reviewed today (cards with due != today and reps > 0)
     for _, card in ipairs(deck.cards) do
-      if card.reps > 0 and card.due > today then
+      if card.state.reps > 0 and card.state.due > today then
         stats.reviewed_today = stats.reviewed_today + 1
       end
     end

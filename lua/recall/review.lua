@@ -1,6 +1,19 @@
 local scheduler = require('recall.scheduler')
 local storage = require('recall.storage')
 
+---@class RecallCardWithState
+---@field id string
+---@field question string
+---@field answer string
+---@field state table { ease: number, interval: integer, reps: integer, due: string }
+
+---@class RecallSession
+---@field deck RecallDeck
+---@field queue RecallCardWithState[]
+---@field current_index integer
+---@field answer_shown boolean
+---@field results table[]
+
 local M = {}
 
 --- Shuffle an array in place
@@ -19,7 +32,7 @@ end
 function M.new_session(deck)
   local queue = {}
   for _, card in ipairs(deck.cards) do
-    if scheduler.is_due(card) then
+    if scheduler.is_due(card.state) then
       table.insert(queue, card)
     end
   end
@@ -74,7 +87,7 @@ function M.rate(session, rating)
   })
 
   -- Immediately persist to storage
-  local json_path = storage.sidecar_path(session.deck.source_file)
+  local json_path = storage.sidecar_path(session.deck.filepath)
   local data = storage.load(json_path)
   storage.set_card_state(data, card.id, new_state)
   storage.save(json_path, data)

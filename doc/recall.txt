@@ -1,0 +1,147 @@
+*recall.txt*  Markdown-based spaced repetition for Neovim
+
+RECALL.NVIM                                                  *recall*
+
+A lightweight, markdown-based spaced repetition (Anki-style) plugin for
+Neovim. Turn your existing markdown notes into a powerful learning system.
+
+==============================================================================
+CONTENTS                                                     *recall-contents*
+
+  1. Introduction ......................................... |recall-introduction|
+  2. Requirements ......................................... |recall-requirements|
+  3. Installation ......................................... |recall-installation|
+  4. Configuration ........................................ |recall-config|
+  5. Card Format .......................................... |recall-card-format|
+  6. Commands ............................................. |recall-commands|
+  7. Keymaps .............................................. |recall-keymaps|
+  8. Health ............................................... |recall-health|
+
+==============================================================================
+1. INTRODUCTION                                          *recall-introduction*
+
+|recall| is a plugin that allows you to perform spaced repetition reviews
+directly within Neovim using your markdown notes. It uses the SM-2 algorithm
+to schedule reviews and stores scheduling data in sidecar JSON files
+(`.flashcards.json`) to keep your markdown notes clean.
+
+==============================================================================
+2. REQUIREMENTS                                          *recall-requirements*
+
+- Neovim >= 0.11
+- snacks.nvim (https://github.com/folke/snacks.nvim)
+
+==============================================================================
+3. INSTALLATION                                          *recall-installation*
+
+Using lazy.nvim:
+>lua
+    {
+      "matthiaseck/recall.nvim",
+      dependencies = { "folke/snacks.nvim" },
+      opts = {
+        dirs = { "~/notes/decks" },
+      }
+    }
+<
+==============================================================================
+4. CONFIGURATION                                               *recall-config*
+
+Default options:
+>lua
+    {
+      dirs = {},                    -- Directories to scan
+      auto_mode = false,            -- All headings = cards
+      min_heading_level = 2,        -- Skip H1 in auto mode
+      review_mode = "float",        -- "float" | "split"
+      rating_keys = {
+        again = "1",
+        hard  = "2",
+        good  = "3",
+        easy  = "4",
+      },
+      show_answer_key = "<Space>",
+      quit_key = "q",
+      initial_ease = 2.5,
+      sidecar_filename = ".flashcards.json",
+    }
+<
+dirs                                                            *recall-opts-dirs*
+    List of absolute paths to directories containing markdown files to scan
+    for flashcards.
+
+auto_mode                                                  *recall-opts-auto_mode*
+    If true, every heading in a markdown file is treated as a card.
+    If false (default), only headings containing "#flashcard" are cards.
+
+min_heading_level                                  *recall-opts-min_heading_level*
+    Minimum heading level (number of '#' characters) to consider as a card in
+    auto_mode. Default is 2 (skips H1).
+
+review_mode                                              *recall-opts-review_mode*
+    The UI used for reviews. Either "float" (floating window) or "split".
+
+rating_keys                                              *recall-opts-rating_keys*
+    Table mapping rating names to key sequences used during review.
+
+show_answer_key                                      *recall-opts-show_answer_key*
+    The key used to reveal the answer during a review.
+
+quit_key                                                    *recall-opts-quit_key*
+    The key used to quit a review session.
+
+==============================================================================
+5. CARD FORMAT                                            *recall-card-format*
+
+Cards are defined by markdown headings. The heading text is the Question,
+and everything until the next heading of equal or higher level is the Answer.
+
+TAGGED MODE                                              *recall-card-tagged*
+Add "#flashcard" to any heading:
+>markdown
+    ## What is Neovim? #flashcard
+    A hyperextensible Vim-based text editor.
+<
+AUTO MODE                                                  *recall-card-auto*
+Every heading (filtered by |recall-opts-min_heading_level|) is a card:
+>markdown
+    ## What is Neovim?
+    A hyperextensible Vim-based text editor.
+<
+==============================================================================
+6. COMMANDS                                                 *recall-commands*
+
+:Recall review [deck_name|.]                                 *:Recall-review*
+    Without arguments, opens a picker to select a deck for review.
+    With ".", scans the current working directory for due decks.
+    With "deck_name", starts review for that specific file.
+
+:Recall stats                                                 *:Recall-stats*
+    Displays review statistics across all configured directories.
+
+:Recall scan [dir]                                             *:Recall-scan*
+    Manually scans configured directories or the specified directory.
+
+==============================================================================
+7. KEYMAPS                                                   *recall-keymaps*
+
+During a review session:
+
+<Space>     Show Answer (configurable via |recall-opts-show_answer_key|)
+1           Rate "Again" (Forgot)
+2           Rate "Hard" (Barely remembered)
+3           Rate "Good" (Remembered with effort)
+4           Rate "Easy" (Perfect recall)
+q           Quit (configurable via |recall-opts-quit_key|)
+
+Ratings 1-4 are configurable via |recall-opts-rating_keys|.
+
+==============================================================================
+8. HEALTH                                                    *recall-health*
+
+To check if recall.nvim is properly installed and configured, run:
+>vim
+    :checkhealth recall
+<
+
+vim:tw=78:ts=8:ft=help:norl:

@@ -4,11 +4,13 @@ local parser = require("recall.parser")
 local storage = require("recall.storage")
 local scheduler = require("recall.scheduler")
 
----@class RecallCardWithState : RecallCard
----@field ease number
----@field interval integer
----@field reps integer
----@field due string
+---@class RecallCardWithState
+---@field id string
+---@field question string
+---@field answer string
+---@field line_number integer
+---@field heading_level integer
+---@field state table { ease: number, interval: integer, reps: integer, due: string }
 
 ---@class RecallDeck
 ---@field name string          -- filename without extension
@@ -70,10 +72,7 @@ local function merge_cards_with_state(parsed_cards, sidecar_data)
       line_number = card.line_number,
       heading_level = card.heading_level,
       id = card.id,
-      ease = state.ease,
-      interval = state.interval,
-      reps = state.reps,
-      due = state.due,
+      state = state,
     }
 
     table.insert(cards_with_state, card_with_state)
@@ -88,7 +87,7 @@ end
 local function count_due_cards(cards)
   local count = 0
   for _, card in ipairs(cards) do
-    if scheduler.is_due(card) then
+    if scheduler.is_due(card.state) then
       count = count + 1
     end
   end

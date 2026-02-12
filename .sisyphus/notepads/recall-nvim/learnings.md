@@ -799,3 +799,8 @@ Decks:
 3. **Code reuse**: Sharing rendering logic between float.lua and split.lua reduces maintenance burden
 4. **API consistency**: Both UIs expose same `M.start(session)` interface for seamless mode switching
 5. **No external dependencies**: Split UI requires only native Neovim APIs (unlike float which needs Snacks.nvim)
+
+### Final Integration Learnings
+- **Consistency in Data Structures**: Ensure that the card object structure is consistent across scanner, review, and stats modules. Using a nested `state` table for scheduling data proved to be more maintainable.
+- **Mocking Snacks.win**: When mocking `Snacks.win` for headless tests, remember that it is often called as a function (e.g., `Snacks.win({...})`) but also contains sub-functions like `Snacks.win.add`. A Lua metatable with `__call` is necessary for a complete mock.
+- **Headless E2E Verification**: Headless Neovim is excellent for verifying logic flows (scanning, rating, stats computation) even when the actual UI cannot be visually inspected.

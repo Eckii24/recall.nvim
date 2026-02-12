@@ -21,3 +21,8 @@ No issues yet.
 **Impact**: Direct deck review (`:Recall review deck_name`) now works correctly.
 
 **Prevention**: Type system would catch this (Lua has runtime-only type checking via LuaLS annotations).
+
+### Resolved during Task 12
+- Fixed `review.rate` using `source_file` instead of `filepath`.
+- Fixed `stats.lua` and `review.lua` passing `card` instead of `card.state` to `scheduler.is_due`.
+- Fixed `scanner.lua` flattening card state, which caused mismatches in other modules.
