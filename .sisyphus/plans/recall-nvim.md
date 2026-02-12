@@ -352,7 +352,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 2. Markdown Parser
+- [x] 2. Markdown Parser
 
   **What to do**:
   - Implement `lua/recall/parser.lua` as a **pure function** module
@@ -536,7 +536,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 3. SM-2 Scheduler
+- [x] 3. SM-2 Scheduler
 
   **What to do**:
   - Implement `lua/recall/scheduler.lua` as a **pure function** module
@@ -692,7 +692,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 4. Sidecar JSON Storage
+- [x] 4. Sidecar JSON Storage
 
   **What to do**:
   - Implement `lua/recall/storage.lua`
