@@ -17,15 +17,13 @@ end
 --- @param deck RecallDeck Deck with cards to review
 --- @return RecallSession Session object
 function M.new_session(deck)
-  -- Filter to only due cards
   local queue = {}
   for _, card in ipairs(deck.cards) do
-    if scheduler.is_due(card.state) then
+    if scheduler.is_due(card) then
       table.insert(queue, card)
     end
   end
 
-  -- Shuffle the queue
   shuffle(queue)
 
   return {

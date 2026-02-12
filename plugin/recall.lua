@@ -7,7 +7,7 @@ vim.api.nvim_create_user_command("Recall", function(opts)
   require("recall.commands").dispatch(opts.fargs)
 end, {
   nargs = "*",
-  complete = function()
-    return { "review", "add", "remove" }
+  complete = function(ArgLead, CmdLine, CursorPos)
+    return require("recall.commands").complete(ArgLead, CmdLine, CursorPos)
   end,
 })
