@@ -816,7 +816,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 5. File Scanner
+- [x] 5. File Scanner
 
   **What to do**:
   - Implement `lua/recall/scanner.lua`
@@ -920,7 +920,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 6. Review State Machine
+- [x] 6. Review State Machine
 
   **What to do**:
   - Implement `lua/recall/review.lua`

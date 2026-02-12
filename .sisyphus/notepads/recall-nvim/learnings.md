@@ -269,3 +269,99 @@ due = today + interval days
 - Task 6 (Review) uses scheduler.schedule() for rating persistence
 - Scheduler is complete and ready for integration testing
 
+
+## [2026-02-12T22:30:00Z] Review Session State Machine Implementation Complete
+
+### Implementation Details
+
+#### Core Design
+- **Module exports 6 public functions**: `new_session()`, `current_card()`, `show_answer()`, `rate()`, `is_complete()`, `progress()`
+- **Session structure**: `{ deck, queue, current_index, answer_shown, results[] }`
+- **Queue filtering**: Uses `scheduler.is_due()` to filter deck.cards to only due cards
+- **Shuffle algorithm**: Fisher-Yates shuffle with `math.randomseed(os.time())`
+
+#### State Machine Flow
+1. `new_session(deck)` → filter due cards, shuffle, initialize session
+2. `current_card(session)` → return queue[current_index] or nil
+3. `show_answer(session)` → set answer_shown flag
+4. `rate(session, rating)` → compute new state, persist, advance index, reset flag
+5. Repeat from step 2 until `is_complete()` returns true
+
+#### Immediate Persistence Pattern
+- **Critical design**: `rate()` calls `storage.save()` immediately after computing new state
+- **No batching**: Each rating persisted before advancing to next card
+- **Quit mid-session**: Already-rated cards are saved, unreviewed cards remain due
+- **Storage flow**: `scheduler.schedule()` → `storage.set_card_state()` → `storage.save()` → advance
+
+#### Progress Tracking
+- **Formula**: `current = current_index`, `total = #queue`, `remaining = max(0, total - current + 1)`
+- **Edge case**: remaining never goes negative (uses math.max)
+
+### QA Results (4/4 Passing)
+
+| Scenario | Test | Result |
+|----------|------|--------|
+| 1 | Session filters to only due cards (5 cards → 3 in queue) | ✅ PASS |
+| 2 | Rate advances to next card, completion detection works | ✅ PASS |
+| 3 | Progress tracking accurate (current=3, total=5, remaining=3) | ✅ PASS |
+| 4 | Rating persists immediately to sidecar JSON | ✅ PASS |
+
+### LSP Diagnostics Status
+- **Warnings**: `undefined-doc-name` for RecallSession, RecallDeck, RecallCardWithState types
+- **Explanation**: These are expected warnings when type definitions are not yet formalized in a separate types file
+- **Status**: Code is functional, all QA scenarios pass
+- **Future**: Type definitions can be added to a shared types module
+
+### Key Patterns Applied
+1. **Fisher-Yates shuffle**: In-place array randomization for review queue
+2. **State machine**: `current_index` advances linearly, `answer_shown` toggles per card
+3. **Immediate I/O**: No buffering, each rating written to disk immediately
+4. **Pure session logic**: No UI rendering, no keymaps (decoupled from presentation layer)
+5. **Graceful completion**: `current_card()` returns nil when session complete
+
+### Performance Notes
+- **Time complexity**: 
+  - `new_session()`: O(n) filter + O(n log n) shuffle
+  - `rate()`: O(1) compute + O(cards) JSON encode/write
+  - `current_card()`, `is_complete()`, `progress()`: O(1)
+- **I/O overhead**: One JSON write per rating (acceptable for human-paced review sessions)
+- **Memory**: Session holds full queue in memory (typically < 100 cards)
+
+### Integration Points
+- **Consumes**: `scheduler.is_due()`, `scheduler.schedule()` from Task 3
+- **Consumes**: `storage.sidecar_path()`, `storage.load()`, `storage.save()`, `storage.set_card_state()` from Task 4
+- **Consumed by**: Task 7 (Float UI), Task 11 (Split UI) — UI modules drive review sessions
+
+### Edge Cases Handled
+- ✅ Deck with no due cards → empty queue, is_complete() true immediately
+- ✅ Rating when session complete → error thrown (prevents invalid state)
+- ✅ Progress tracking edge case → remaining never negative
+- ✅ Sidecar path derivation → uses storage.sidecar_path() from deck.source_file
+
+### Validation
+- All 4 mandatory QA scenarios pass
+- State machine transitions verified (show → rate → advance → repeat)
+- Immediate persistence confirmed via file system check
+- Progress math validated with multi-card session
+
+### Next Steps
+- Task 7 (Float UI) can now use review module to drive UI interactions
+- Task 11 (Split UI) will also consume review session API
+- Review session is complete and ready for UI integration
+
+## Scanner Module (Task 5)
+
+**File discovery**: `vim.fs.find(predicate_fn, { path = dir, type = "file", limit = math.huge })` works perfectly for finding all .md files in a directory. Using a predicate function with `name:match("%.md$")` provides clean pattern matching.
+
+**mtime caching**: `vim.uv.fs_stat(filepath).mtime.sec` provides reliable modification time for cache invalidation. Cache structure: `{ [filepath] = { mtime_sec = number, parsed_cards = RecallCard[] } }`.
+
+**Merging cards with state**: New cards (not in sidecar JSON) get initial state via `scheduler.new_card()`. Existing cards preserve scheduling data from sidecar. This merge pattern ensures seamless handling of both new and existing cards.
+
+**Due count calculation**: Use `scheduler.is_due(card)` to filter cards for review count. All new cards are due (due date = today).
+
+**QA validation**:
+- Scenario 1: Directory scan finds all .md files, counts cards correctly
+- Scenario 2: New cards initialize with ease=2.5, interval=0, reps=0, due=today
+- Scenario 3: Existing scheduling data preserved (ease=2.8, interval=7, reps=3, due=2026-02-20)
+
+**LSP warnings**: `undefined-global vim` warnings are expected in Neovim Lua modules — `vim` is injected at runtime. Safe to ignore.
