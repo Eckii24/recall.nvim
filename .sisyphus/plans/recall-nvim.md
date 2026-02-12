@@ -205,7 +205,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 1. Project Setup + Config Module
+- [x] 1. Project Setup + Config Module
 
   **What to do**:
   - Create the full plugin directory structure:
