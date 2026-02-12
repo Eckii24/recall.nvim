@@ -1179,7 +1179,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 8. Deck Picker (snacks.nvim)
+- [x] 8. Deck Picker (snacks.nvim)
 
   **What to do**:
   - Implement `lua/recall/picker.lua`
@@ -1254,7 +1254,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 9. Statistics Module
+- [x] 9. Statistics Module
 
   **What to do**:
   - Implement `lua/recall/stats.lua`

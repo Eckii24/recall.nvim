@@ -441,3 +441,165 @@ All scenarios verified via automated state machine tests. UI rendering requires 
 - Task 9 (Commands) can now wire up `:Recall review` to call `float.start()`
 - Task 11 (Split UI) will use similar render pattern with split window instead of float
 - Float UI is complete and ready for integration
+
+## [2026-02-12T23:30:00Z] Picker Implementation Complete (Task 8)
+
+### Implementation Details
+
+#### Core Design
+- **Module exports 2 public functions**: `M.pick_deck(decks, on_select)`, `M.pick_and_review(opts)`
+- **Snacks.picker.pick()**: Uses items-based picker with custom preview function
+- **Sorting**: Decks sorted by `due` count (descending) before display
+- **Preview**: Shows first 5 cards from deck as markdown
+
+#### Snacks.picker API Usage
+- **Items format**: `{ text = "deck_name [X due / Y total]", deck = RecallDeck }`
+- **Preview pattern**: Return `{ buf = function(buf) ... end }` to set buffer content
+- **Confirm callback**: `function(_, item)` receives selected item (picker param unused)
+- **Filetype setting**: `vim.bo[buf].filetype = "markdown"` enables syntax highlighting in preview
+
+#### pick_and_review() Orchestration Flow
+1. Get dirs from opts or config.opts.dirs
+2. Call `scanner.scan(dirs, scan_opts)` to get all decks
+3. Filter to decks with `due > 0` (unless `show_all=true`)
+4. Open picker via `pick_deck(filtered_decks, on_select)`
+5. On selection: create session via `review.new_session(deck)`
+6. Start UI based on `config.opts.review_mode` ("float" or "split")
+
+#### Preview Generation
+- **Header**: Deck name as markdown H1, stats as bold text
+- **Cards**: Loop first 5 cards, show question/answer with H3 headings
+- **Fallback**: Empty preview if no cards (edge case handling)
+
+### QA Results
+
+| Scenario | Test | Result |
+|----------|------|--------|
+| 1 | Module loads (both functions exist) | ✅ PASS |
+| 2 | LSP diagnostics clean (no errors, only expected vim warnings) | ✅ PASS |
+
+### LSP Diagnostics Status
+- **Errors**: None
+- **Warnings**: Expected `undefined-global vim` warnings (Neovim runtime)
+- **Hints**: Fixed unused local `picker` parameter in confirm callback
+
+### Key Patterns Applied
+1. **Snacks.picker items pattern**: Convert data to `{ text, ...metadata }` format
+2. **Inline sorting**: `vim.list_extend({}, decks)` to avoid mutating input array
+3. **Preview buffer setup**: Use buf callback to set lines and filetype
+4. **Multi-module orchestration**: Integrates scanner, review, config, UI modules
+5. **Config fallback**: `opts.dirs or config.opts.dirs` for flexible invocation
+
+### Integration Points
+- **Consumes**: `scanner.scan()` from Task 5
+- **Consumes**: `review.new_session()` from Task 6
+- **Consumes**: `config.opts` (dirs, auto_mode, min_heading_level, review_mode)
+- **Consumes**: `ui.float.start()` from Task 7, `ui.split.start()` from Task 11
+- **Consumed by**: Task 9 (Commands) will call `pick_and_review()` for `:Recall review`
+
+### Edge Cases Handled
+- ✅ No directories configured → warn user, exit gracefully
+- ✅ No decks with due cards → notify user, exit gracefully
+- ✅ Session with no due cards (after creation) → notify and exit
+- ✅ Empty preview (no cards in deck) → return empty lines array
+- ✅ show_all=true option → bypass due card filter
+
+### Performance Notes
+- **Time complexity**: 
+  - `pick_deck()`: O(n log n) for sorting + O(n) item conversion
+  - `pick_and_review()`: O(files) scan + O(decks) filter + picker overhead
+- **Preview generation**: O(min(5, cards)) per deck preview (lazy, on-demand)
+- **Memory**: Picker holds all deck items in memory (typically < 100 decks)
+
+### Next Steps
+- Task 9 (Commands) can wire up `:Recall review` to `picker.pick_and_review()`
+- Picker is complete and ready for integration testing
+- Manual testing: Run `:lua require('recall.picker').pick_and_review()` in Neovim
+
+## [2026-02-12T23:30:00Z] Stats Module Implementation Complete
+
+### Implementation Details
+
+#### Core Design
+- **Module exports 3 public functions**: `deck_stats()`, `compute()`, `display()`
+- **Statistics tracked**: total, due, new (reps=0), mature (interval>21), young (1-21d), reviewed_today
+- **Deck summaries**: Array of { name, total, due } for each deck
+
+#### Statistics Computation Logic
+1. **New cards**: `card.reps == 0` — never reviewed
+2. **Mature cards**: `card.interval > 21` — long-term retention
+3. **Young cards**: `card.interval >= 1 and card.interval <= 21` — recent learning
+4. **Reviewed today**: `card.reps > 0 and card.due > today` — cards advanced today
+5. **Due cards**: Uses `scheduler.is_due(card)` for consistency
+
+#### Display Implementation
+- **Primary**: Uses `Snacks.win()` with float position, markdown filetype
+- **Fallback**: Uses `vim.notify()` if Snacks unavailable
+- **Layout**: Header → main stats → separator → mature/young breakdown → deck summaries
+- **Formatting**: Fixed-width alignment with `string.format()` for clean output
+
+### QA Results (3/3 Passing)
+
+| Scenario | Test | Result |
+|----------|------|--------|
+| 1 | deck_stats() counts correctly (5 cards: 1 new, 2 mature, 2 young) | ✅ PASS |
+| 2 | compute() aggregates across decks (7 total, 2 new, 3 mature, 2 young) | ✅ PASS |
+| 3 | Deck summaries contain correct name and total count | ✅ PASS |
+
+### LSP Diagnostics Status
+- **Warnings**: Expected `undefined-global vim` warnings (runtime-only, see learnings from previous tasks)
+- **No errors**: Module syntax valid, all functions reachable
+
+### Key Patterns Applied
+1. **Aggregation pattern**: Iterate decks, compute per-deck stats, sum into totals
+2. **Graceful fallback**: `pcall(require, "snacks")` with fallback to vim.notify
+3. **Pure computation**: deck_stats() and compute() are pure functions (no side effects)
+4. **Display separation**: Rendering logic isolated in display() function
+5. **Date arithmetic**: Uses `os.date("%Y-%m-%d")` for today, string comparison for date ordering
+
+### Performance Notes
+- **Time complexity**:
+  - `deck_stats()`: O(n) where n = cards in deck
+  - `compute()`: O(m*n) where m = decks, n = avg cards per deck
+  - `display()`: O(d) where d = number of decks (rendering)
+- **Space complexity**: O(d) for deck summaries array
+- **Typical scale**: < 10 decks, < 100 cards per deck → sub-millisecond computation
+
+### Integration Points
+- **Consumes**: `scheduler.is_due()` from Task 3 for due card detection
+- **Consumed by**: Task 9 (Commands) will call `stats.compute()` + `stats.display()` for `:Recall stats`
+- **Data contract**: Works with `RecallDeck[]` from scanner.scan()
+
+### Edge Cases Handled
+- ✅ Empty deck (0 cards) → all stats zero
+- ✅ No decks → empty deck summaries array
+- ✅ Snacks unavailable → fallback to vim.notify
+- ✅ Cards with interval=0 → not counted in young/mature (only new)
+
+### Display Output Format
+```
+📊 recall.nvim Statistics
+─────────────────────────
+Total cards:     142
+Due today:        12
+New cards:         5
+Reviewed today:    8
+─────────────────────────
+Mature (>21d):   89
+Young (1-21d):   48
+
+Decks:
+  algorithms    [3 due / 45 total]
+  data-structures    [5 due / 32 total]
+```
+
+### Validation
+- All 3 core QA scenarios pass
+- Computation logic matches task specification
+- Display format matches plan requirements
+- Module loads without errors
+
+### Next Steps
+- Task 9 (Commands) can now implement `:Recall stats` command
+- Stats module ready for integration with scanner output
+- Complete and ready for end-to-end testing
