@@ -1506,7 +1506,7 @@ Critical Path: 1 → 2 → 5 → 8 → 10 → 12
 
 ---
 
-- [ ] 12. README + Vimdoc + Final Integration
+- [x] 12. README + Vimdoc + Final Integration
 
   **What to do**:
   - Create `recall.nvim/README.md` with:
