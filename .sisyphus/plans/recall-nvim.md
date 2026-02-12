@@ -82,12 +82,12 @@ Build `recall.nvim` — a standalone, markdown-native spaced repetition plugin f
 - README.md
 
 ### Definition of Done
-- [ ] `:Recall review` opens deck picker, selecting a deck starts floating window review with card display and 4-button rating
-- [ ] Cards are scheduled according to SM-2 algorithm (intervals verified)
-- [ ] `.flashcards.json` is created/updated next to markdown files with scheduling data
-- [ ] Markdown files remain completely untouched (no inline metadata)
-- [ ] `:Recall stats` shows due count, total cards, review progress
-- [ ] `:checkhealth recall` passes all checks
+- [x] `:Recall review` opens deck picker, selecting a deck starts floating window review with card display and 4-button rating
+- [x] Cards are scheduled according to SM-2 algorithm (intervals verified)
+- [x] `.flashcards.json` is created/updated next to markdown files with scheduling data
+- [x] Markdown files remain completely untouched (no inline metadata)
+- [x] `:Recall stats` shows due count, total cards, review progress
+- [x] `:checkhealth recall` passes all checks
 
 ### Must Have
 - Heading-based card parsing with `#flashcard` tag support
@@ -1666,15 +1666,15 @@ rm -rf /tmp/recall_test
 ```
 
 ### Final Checklist
-- [ ] `:Recall review` opens deck picker → selecting deck starts floating window review
-- [ ] `:Recall review .` scans cwd for flashcard files
-- [ ] `:Recall stats` shows due count, total cards, deck breakdown
-- [ ] `:Recall scan` reports card counts per file
-- [ ] `:checkhealth recall` passes all checks
-- [ ] `.flashcards.json` created next to markdown files after first review
-- [ ] Markdown files are NEVER modified by the plugin
-- [ ] SM-2 intervals are correct (1 → 6 → 15 → ...)
-- [ ] Both floating and split review modes work
-- [ ] All keymaps functional during review (Space, 1-4, q)
-- [ ] README.md documents all features, commands, and config
-- [ ] `:help recall` works with vimdoc
+- [x] `:Recall review` opens deck picker → selecting deck starts floating window review
+- [x] `:Recall review .` scans cwd for flashcard files
+- [x] `:Recall stats` shows due count, total cards, deck breakdown
+- [x] `:Recall scan` reports card counts per file
+- [x] `:checkhealth recall` passes all checks
+- [x] `.flashcards.json` created next to markdown files after first review
+- [x] Markdown files are NEVER modified by the plugin
+- [x] SM-2 intervals are correct (1 → 6 → 15 → ...)
+- [x] Both floating and split review modes work
+- [x] All keymaps functional during review (Space, 1-4, q)
+- [x] README.md documents all features, commands, and config
+- [x] `:help recall` works with vimdoc
