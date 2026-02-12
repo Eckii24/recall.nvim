@@ -16,11 +16,7 @@ function M.dispatch(fargs)
     if not arg then
       picker.pick_and_review()
     elseif arg == "." then
-      local decks = scanner.scan_cwd({
-        auto_mode = config.opts.auto_mode,
-        min_heading_level = config.opts.min_heading_level,
-        include_sub_headings = config.opts.include_sub_headings,
-      })
+      local decks = scanner.scan_cwd()
 
       local due_decks = {}
       for _, deck in ipairs(decks) do
@@ -51,17 +47,13 @@ function M.dispatch(fargs)
         end
       end)
     else
-      local dirs = config.opts.dirs
+      local dirs = config.get_dirs()
       if not dirs or #dirs == 0 then
         vim.notify("No directories configured for scanning. Set dirs in setup().", vim.log.levels.WARN)
         return
       end
 
-      local decks = scanner.scan(dirs, {
-        auto_mode = config.opts.auto_mode,
-        min_heading_level = config.opts.min_heading_level,
-        include_sub_headings = config.opts.include_sub_headings,
-      })
+      local decks = scanner.scan(dirs)
 
       local target_deck = nil
       for _, deck in ipairs(decks) do
@@ -92,17 +84,13 @@ function M.dispatch(fargs)
       end
     end
   elseif subcommand == "stats" then
-    local dirs = config.opts.dirs
+    local dirs = config.get_dirs()
     if not dirs or #dirs == 0 then
       vim.notify("No directories configured for scanning. Set dirs in setup().", vim.log.levels.WARN)
       return
     end
 
-    local decks = scanner.scan(dirs, {
-      auto_mode = config.opts.auto_mode,
-      min_heading_level = config.opts.min_heading_level,
-      include_sub_headings = config.opts.include_sub_headings,
-    })
+    local decks = scanner.scan(dirs)
 
     local computed_stats = stats.compute(decks)
     stats.display(computed_stats)
@@ -113,18 +101,14 @@ function M.dispatch(fargs)
     if arg then
       dirs_to_scan = { arg }
     else
-      dirs_to_scan = config.opts.dirs
+      dirs_to_scan = config.get_dirs()
       if not dirs_to_scan or #dirs_to_scan == 0 then
         vim.notify("No directories configured for scanning. Set dirs in setup().", vim.log.levels.WARN)
         return
       end
     end
 
-    local decks = scanner.scan(dirs_to_scan, {
-      auto_mode = config.opts.auto_mode,
-      min_heading_level = config.opts.min_heading_level,
-      include_sub_headings = config.opts.include_sub_headings,
-    })
+    local decks = scanner.scan(dirs_to_scan)
 
     local total_cards = 0
     for _, deck in ipairs(decks) do
@@ -183,16 +167,12 @@ function M.complete(ArgLead, CmdLine)
   end
 
   if num_args >= 2 and (args[2] == "review" or args[3] == "review") then
-    local dirs = config.opts.dirs
+    local dirs = config.get_dirs()
     if not dirs or #dirs == 0 then
       return {}
     end
 
-    local decks = scanner.scan(dirs, {
-      auto_mode = config.opts.auto_mode,
-      min_heading_level = config.opts.min_heading_level,
-      include_sub_headings = config.opts.include_sub_headings,
-    })
+    local decks = scanner.scan(dirs)
 
     local deck_names = { "." }
     for _, deck in ipairs(decks) do

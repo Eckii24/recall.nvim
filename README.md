@@ -11,7 +11,7 @@
   - **Tagged Mode**: Explicitly mark cards with `#flashcard` in headings.
   - **Auto Mode**: Automatically treat all headings (from a configurable level) as cards.
 - **SM-2 Algorithm**: Proven spaced repetition scheduling.
-- **Clean Notes**: Scheduling state is stored in a hidden `.flashcards.json` sidecar file next to your markdown.
+- **Clean Notes**: Scheduling state is stored in per-deck sidecar JSON files (e.g., `notes.flashcards.json`) next to your markdown.
 - **Flexible UI**: Choose between a floating window or a split buffer for reviews.
 - **Integrated Stats**: Track your progress across all your decks.
 - **Fast**: Scans directories efficiently and uses `mtime` caching.
@@ -42,22 +42,44 @@
 
 ```lua
 {
-  dirs = {},                    -- List of directories to scan for markdown files
-  auto_mode = false,            -- If true, all headings are treated as cards
-  min_heading_level = 2,        -- In auto_mode, skip headings above this level (e.g. skip H1)
-  include_sub_headings = true,  -- Include sub-headings in answer (false = stop at any heading)
-  review_mode = "float",        -- UI mode: "float" or "split"
-  rating_keys = {
-    again = "1",                -- Quality 0: Forgot
-    hard  = "2",                -- Quality 2: Hard to remember
-    good  = "3",                -- Quality 3: Good recall
-    easy  = "4",                -- Quality 5: Perfect recall
+  defaults = {
+    auto_mode = false,            -- If true, all headings are treated as cards
+    min_heading_level = 2,        -- In auto_mode, skip headings above this level (e.g. skip H1)
+    include_sub_headings = true,  -- Include sub-headings in answer (false = stop at any heading)
+    sidecar_suffix = ".flashcards.json", -- Per-deck sidecar suffix: <deck-name><suffix>
   },
-  show_answer_key = "<Space>",  -- Key to reveal the answer
-  quit_key = "q",               -- Key to quit the review session
-  initial_ease = 2.5,           -- Starting ease factor for new cards
-  sidecar_filename = ".flashcards.json", -- Name of the sidecar state file
-  show_session_stats = "always", -- "always" | "on_finish" | "on_quit" | "never"
+  dirs = {},                      -- Directories to scan (string or { path = ..., auto_mode = ..., ... })
+  keys = {
+    rating = {
+      again = "1",                -- Quality 0: Forgot
+      hard  = "2",                -- Quality 2: Hard to remember
+      good  = "3",                -- Quality 3: Good recall
+      easy  = "4",                -- Quality 5: Perfect recall
+    },
+    show_answer = "<Space>",      -- Key to reveal the answer
+    quit = "q",                   -- Key to quit the review session
+  },
+  review_mode = "float",          -- UI mode: "float" or "split"
+  initial_ease = 2.5,             -- Starting ease factor for new cards
+  show_session_stats = "always",  -- "always" | "on_finish" | "on_quit" | "never"
+}
+```
+
+### Per-Directory Configuration
+
+Settings from `defaults` (`auto_mode`, `min_heading_level`, `include_sub_headings`, `sidecar_suffix`) can be overridden per directory:
+
+```lua
+{
+  defaults = {
+    auto_mode = false,
+    min_heading_level = 2,
+  },
+  dirs = {
+    { path = "~/notes/decks", auto_mode = true },       -- override auto_mode for this dir
+    { path = "~/notes/work", min_heading_level = 3 },    -- override min_heading_level
+    "~/notes/personal",                                   -- string shorthand, uses all defaults
+  },
 }
 ```
 
@@ -87,7 +109,7 @@ An algorithm for spaced repetition.
 ```
 
 #### Auto Mode
-Set `auto_mode = true` in your config. Every heading (at or below `min_heading_level`) will be treated as a card.
+Set `auto_mode = true` in your `defaults` (or per-directory). Every heading (at or below `min_heading_level`) will be treated as a card.
 
 ### Commands
 
@@ -138,5 +160,5 @@ A conflict that occurs when Git is unable to automatically resolve differences i
 ## 🛠️ Implementation Details
 
 - **Card Identity**: Cards are identified by a hash of their question text. Moving a card within a file preserves its state. Changing the question text creates a "new" card.
-- **Sidecar Storage**: State is stored in `.flashcards.json`. You can commit this to git to sync progress across machines, or ignore it if you prefer local-only progress.
+- **Sidecar Storage**: Each deck gets its own sidecar file named `<deck-name><sidecar_suffix>` (e.g., `notes.flashcards.json` for `notes.md`). You can commit these to git to sync progress across machines, or ignore them if you prefer local-only progress.
 - **Performance**: Scanning is only done when needed, and results are cached based on file modification times.

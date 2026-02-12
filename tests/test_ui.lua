@@ -26,6 +26,7 @@ local function make_session(n_cards)
     cards = cards,
     total = #cards,
     due = #cards,
+    sidecar_suffix = ".flashcards.json",
   }
 
   return review.new_session(deck)

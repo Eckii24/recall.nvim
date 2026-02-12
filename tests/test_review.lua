@@ -35,6 +35,7 @@ local function make_deck(n, dir)
     cards = cards,
     total = #cards,
     due = #cards,
+    sidecar_suffix = ".flashcards.json",
   }
 end
 
@@ -76,6 +77,7 @@ local function make_mixed_deck()
     },
     total = 3,
     due = 2,
+    sidecar_suffix = ".flashcards.json",
   }
 end
 
@@ -130,6 +132,7 @@ local function test_new_session_empty_queue_when_no_due()
     },
     total = 1,
     due = 0,
+    sidecar_suffix = ".flashcards.json",
   }
 
   local session = review.new_session(deck)

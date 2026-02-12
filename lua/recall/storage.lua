@@ -88,12 +88,13 @@ function M.set_card_state(data, card_id, card_state)
 end
 
 ---@param md_file_path string — path to markdown file (e.g., "/path/to/file.md")
----@return string — path to sidecar JSON (e.g., "/path/to/.flashcards.json")
-function M.sidecar_path(md_file_path)
-  -- Get directory and filename
+---@param sidecar_suffix string|nil — suffix for sidecar file (default: ".flashcards.json")
+---@return string — path to per-deck sidecar JSON (e.g., "/path/to/file.flashcards.json")
+function M.sidecar_path(md_file_path, sidecar_suffix)
+  sidecar_suffix = sidecar_suffix or ".flashcards.json"
   local dir = vim.fn.fnamemodify(md_file_path, ":h")
-  -- Return directory + default sidecar filename
-  return dir .. "/.flashcards.json"
+  local deck_name = vim.fn.fnamemodify(md_file_path, ":t:r")
+  return dir .. "/" .. deck_name .. sidecar_suffix
 end
 
 return M

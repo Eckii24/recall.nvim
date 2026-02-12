@@ -3,6 +3,7 @@ local M = {}
 local parser = require("recall.parser")
 local storage = require("recall.storage")
 local scheduler = require("recall.scheduler")
+local config = require("recall.config")
 
 ---@class RecallCardWithState
 ---@field id string
@@ -18,6 +19,7 @@ local scheduler = require("recall.scheduler")
 ---@field cards RecallCardWithState[]
 ---@field total integer
 ---@field due integer          -- cards due today
+---@field sidecar_suffix string -- suffix used for this deck's sidecar file
 
 -- Cache: { [filepath] = { mtime_sec = number, parsed_cards = RecallCard[] } }
 local parse_cache = {}
@@ -96,15 +98,16 @@ end
 
 --- Scan a single markdown file
 --- @param filepath string Full path to markdown file
---- @param opts table|nil Parsing options (auto_mode, min_heading_level)
+--- @param opts table|nil Parsing options (auto_mode, min_heading_level, include_sub_headings, sidecar_suffix)
 --- @return RecallDeck
 function M.scan_file(filepath, opts)
   opts = opts or {}
 
   local parsed_cards = get_cached_or_parse(filepath, opts)
 
-  local sidecar_path = storage.sidecar_path(filepath)
-  local sidecar_data = storage.load(sidecar_path)
+  local sidecar_suffix = opts.sidecar_suffix
+  local sidecar = storage.sidecar_path(filepath, sidecar_suffix)
+  local sidecar_data = storage.load(sidecar)
 
   local cards_with_state = merge_cards_with_state(parsed_cards, sidecar_data)
 
@@ -116,20 +119,24 @@ function M.scan_file(filepath, opts)
     cards = cards_with_state,
     total = #cards_with_state,
     due = count_due_cards(cards_with_state),
+    sidecar_suffix = sidecar_suffix or ".flashcards.json",
   }
 
   return deck
 end
 
---- Scan multiple directories for markdown files
+--- Scan multiple directories for markdown files.
 --- @param dirs string[] Array of directory paths to scan
---- @param opts table|nil Parsing options (auto_mode, min_heading_level)
+--- @param opts table|nil Fallback options (dir-level config takes precedence)
 --- @return RecallDeck[] Array of decks
 function M.scan(dirs, opts)
   opts = opts or {}
   local decks = {}
 
   for _, dir in ipairs(dirs) do
+    local dir_opts = config.get_dir_opts(dir)
+    local merged = vim.tbl_extend("force", opts, dir_opts)
+
     local files = vim.fs.find(function(name)
       return name:match("%.md$")
     end, {
@@ -139,7 +146,7 @@ function M.scan(dirs, opts)
     })
 
     for _, filepath in ipairs(files) do
-      local deck = M.scan_file(filepath, opts)
+      local deck = M.scan_file(filepath, merged)
       table.insert(decks, deck)
     end
   end
@@ -148,7 +155,7 @@ function M.scan(dirs, opts)
 end
 
 --- Scan current working directory for markdown files
---- @param opts table|nil Parsing options (auto_mode, min_heading_level)
+--- @param opts table|nil Parsing options
 --- @return RecallDeck[] Array of decks
 function M.scan_cwd(opts)
   local cwd = vim.fn.getcwd()

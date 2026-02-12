@@ -1,6 +1,7 @@
 local scanner = require("recall.scanner")
 local storage = require("recall.storage")
 local scheduler = require("recall.scheduler")
+local config = require("recall.config")
 
 --- Helper: create a temp directory
 local function tmpdir()
@@ -130,6 +131,7 @@ local function test_scan_directory()
   write_file(dir .. "/a.md", "## Q1 #flashcard\n\nA1.\n")
   write_file(dir .. "/b.md", "## Q2 #flashcard\n\nA2.\n")
 
+  config.setup({ dirs = { dir } })
   local decks = scanner.scan({ dir })
 
   assert(#decks == 2, "Should find 2 decks, got " .. #decks)
@@ -148,6 +150,7 @@ local function test_scan_ignores_non_md_files()
   write_file(dir .. "/notes.md", "## Card #flashcard\n\nAnswer.\n")
   write_file(dir .. "/readme.txt", "Not a markdown file.\n")
 
+  config.setup({ dirs = { dir } })
   local decks = scanner.scan({ dir })
 
   assert(#decks == 1, "Should only find .md files, got " .. #decks)
@@ -163,6 +166,7 @@ local function test_scan_multiple_dirs()
   write_file(dir1 .. "/d1.md", "## Q1 #flashcard\n\nA.\n")
   write_file(dir2 .. "/d2.md", "## Q2 #flashcard\n\nA.\n")
 
+  config.setup({ dirs = { dir1, dir2 } })
   local decks = scanner.scan({ dir1, dir2 })
 
   assert(#decks == 2, "Should find 2 decks from 2 dirs, got " .. #decks)
@@ -173,6 +177,7 @@ end
 
 local function test_scan_empty_directory()
   local dir = tmpdir()
+  config.setup({ dirs = { dir } })
   local decks = scanner.scan({ dir })
   assert(#decks == 0, "Empty dir should yield 0 decks, got " .. #decks)
 end

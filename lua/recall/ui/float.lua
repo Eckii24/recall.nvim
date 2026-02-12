@@ -53,8 +53,8 @@ end
 --- @param session RecallSession
 --- @return table[]
 local function build_footer(session)
-  local rating_keys = config.opts.rating_keys
-  local quit_key = config.opts.quit_key
+  local rating_keys = config.opts.keys.rating
+  local quit_key = config.opts.keys.quit
 
   if review.is_complete(session) or showing_stats then
     return {
@@ -78,7 +78,7 @@ local function build_footer(session)
     }
   end
 
-  local show_label = config.opts.show_answer_key == "<Space>" and "\u{2423}" or config.opts.show_answer_key
+  local show_label = config.opts.keys.show_answer == "<Space>" and "\u{2423}" or config.opts.keys.show_answer
   return {
     { " " .. show_label .. " ", "RecallButtonLabel" },
     { " Show Answer ", "RecallFooter" },
@@ -176,7 +176,7 @@ end
 
 local function setup_close_keymaps()
   local buf = current_win.buf
-  for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>", config.opts.quit_key }) do
+  for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>", config.opts.keys.quit }) do
     pcall(vim.api.nvim_buf_del_keymap, buf, "n", key)
     vim.api.nvim_buf_set_keymap(buf, "n", key, "", {
       noremap = true,
@@ -208,9 +208,9 @@ end
 
 local function setup_dynamic_keymaps()
   local buf = current_win.buf
-  local rating_keys = config.opts.rating_keys
-  local show_key = config.opts.show_answer_key
-  local quit_key = config.opts.quit_key
+  local rating_keys = config.opts.keys.rating
+  local show_key = config.opts.keys.show_answer
+  local quit_key = config.opts.keys.quit
 
   local function safe_unmap(mode, key)
     pcall(vim.api.nvim_buf_del_keymap, buf, mode, key)

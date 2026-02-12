@@ -61,7 +61,7 @@ end
 local function test_sidecar_path()
   local md_path = "/home/user/notes/deck.md"
   local sidecar = storage.sidecar_path(md_path)
-  assert(sidecar == "/home/user/notes/.flashcards.json", "Sidecar path mismatch: " .. sidecar)
+  assert(sidecar == "/home/user/notes/deck.flashcards.json", "Sidecar path mismatch: " .. sidecar)
 end
 
 local function test_save_returns_true_on_success()
@@ -129,7 +129,7 @@ end
 local function test_sidecar_path_nested_dir()
   local md_path = "/a/b/c/d/notes.md"
   local sidecar = storage.sidecar_path(md_path)
-  assert(sidecar == "/a/b/c/d/.flashcards.json", "Sidecar path for nested dir: " .. sidecar)
+  assert(sidecar == "/a/b/c/d/notes.flashcards.json", "Sidecar path for nested dir: " .. sidecar)
 end
 
 local tests = {

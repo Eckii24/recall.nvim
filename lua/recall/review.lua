@@ -87,7 +87,7 @@ function M.rate(session, rating)
   })
 
   -- Immediately persist to storage
-  local json_path = storage.sidecar_path(session.deck.filepath)
+  local json_path = storage.sidecar_path(session.deck.filepath, session.deck.sidecar_suffix)
   local data = storage.load(json_path)
   storage.set_card_state(data, card.id, new_state)
   storage.save(json_path, data)

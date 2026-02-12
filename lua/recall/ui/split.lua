@@ -44,8 +44,8 @@ end
 --- @return string
 local function build_winbar(session)
   local deck_name = vim.fn.fnamemodify(session.deck.filepath, ":t")
-  local rating_keys = config.opts.rating_keys
-  local quit_key = config.opts.quit_key
+  local rating_keys = config.opts.keys.rating
+  local quit_key = config.opts.keys.quit
 
   if review.is_complete(session) or showing_stats then
     return " recall.nvim \u{00b7} " .. deck_name .. " \u{00b7} Complete  %=  Any key to close "
@@ -62,7 +62,7 @@ local function build_winbar(session)
       .. "[" .. rating_keys.easy .. "] Easy  "
       .. "[" .. quit_key .. "] Quit "
   else
-    local show_label = config.opts.show_answer_key == "<Space>" and "\u{2423}" or config.opts.show_answer_key
+    local show_label = config.opts.keys.show_answer == "<Space>" and "\u{2423}" or config.opts.keys.show_answer
     right = "[" .. show_label .. "] Show Answer  [" .. quit_key .. "] Quit "
   end
 
@@ -155,7 +155,7 @@ local function setup_close_keymaps()
   if not buf or not vim.api.nvim_buf_is_valid(buf) then
     return
   end
-  for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>", config.opts.quit_key }) do
+  for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>", config.opts.keys.quit }) do
     pcall(vim.api.nvim_buf_del_keymap, buf, "n", key)
     vim.api.nvim_buf_set_keymap(buf, "n", key, "", {
       noremap = true,
@@ -191,9 +191,9 @@ local function setup_dynamic_keymaps()
     return
   end
 
-  local rating_keys = config.opts.rating_keys
-  local show_key = config.opts.show_answer_key
-  local quit_key = config.opts.quit_key
+  local rating_keys = config.opts.keys.rating
+  local show_key = config.opts.keys.show_answer
+  local quit_key = config.opts.keys.quit
 
   local function safe_unmap(mode, key)
     pcall(vim.api.nvim_buf_del_keymap, buf, mode, key)

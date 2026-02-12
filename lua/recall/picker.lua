@@ -86,25 +86,18 @@ function M.pick_deck(decks, on_select)
 end
 
 --- Convenience function: scan directories, filter due decks, open picker, start review
---- @param opts table|nil Options: { dirs = string[], auto_mode = bool, min_heading_level = int, show_all = bool }
+--- @param opts table|nil Options: { dirs = string[], show_all = bool }
 function M.pick_and_review(opts)
   opts = opts or {}
 
-  -- Get directories from opts or config
-  local dirs = opts.dirs or config.opts.dirs
+  local dirs = opts.dirs or config.get_dirs()
   if not dirs or #dirs == 0 then
     vim.notify("No directories configured for scanning. Set dirs in setup().", vim.log.levels.WARN)
     return
   end
 
-  -- Scan for decks
-  local decks = scanner.scan(dirs, {
-    auto_mode = opts.auto_mode or config.opts.auto_mode,
-    min_heading_level = opts.min_heading_level or config.opts.min_heading_level,
-    include_sub_headings = opts.include_sub_headings ~= nil and opts.include_sub_headings or config.opts.include_sub_headings,
-  })
+  local decks = scanner.scan(dirs)
 
-  -- Filter to decks with at least 1 due card (unless show_all=true)
   local show_all = opts.show_all or false
   local filtered_decks = {}
   for _, deck in ipairs(decks) do
@@ -118,18 +111,14 @@ function M.pick_and_review(opts)
     return
   end
 
-  -- Open picker
   M.pick_deck(filtered_decks, function(selected_deck)
-    -- Create review session
     local session = review.new_session(selected_deck)
 
-    -- Check if there are any cards to review
     if review.is_complete(session) then
       vim.notify(string.format("No cards due in '%s'.", selected_deck.name), vim.log.levels.INFO)
       return
     end
 
-    -- Start UI based on review_mode
     local review_mode = config.opts.review_mode
     if review_mode == "split" then
       local ui_split = require("recall.ui.split")
