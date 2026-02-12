@@ -123,4 +123,18 @@ function M.progress(session)
   }
 end
 
+--- Get session stats: count of each rating
+--- @param session RecallSession Session object
+--- @return table { total = int, again = int, hard = int, good = int, easy = int }
+function M.session_stats(session)
+  local counts = { total = 0, again = 0, hard = 0, good = 0, easy = 0 }
+  for _, result in ipairs(session.results) do
+    counts.total = counts.total + 1
+    if counts[result.rating] then
+      counts[result.rating] = counts[result.rating] + 1
+    end
+  end
+  return counts
+end
+
 return M

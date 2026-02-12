@@ -45,6 +45,7 @@
   dirs = {},                    -- List of directories to scan for markdown files
   auto_mode = false,            -- If true, all headings are treated as cards
   min_heading_level = 2,        -- In auto_mode, skip headings above this level (e.g. skip H1)
+  include_sub_headings = true,  -- Include sub-headings in answer (false = stop at any heading)
   review_mode = "float",        -- UI mode: "float" or "split"
   rating_keys = {
     again = "1",                -- Quality 0: Forgot
@@ -56,6 +57,7 @@
   quit_key = "q",               -- Key to quit the review session
   initial_ease = 2.5,           -- Starting ease factor for new cards
   sidecar_filename = ".flashcards.json", -- Name of the sidecar state file
+  show_session_stats = "always", -- "always" | "on_finish" | "on_quit" | "never"
 }
 ```
 
@@ -64,6 +66,10 @@
 ### Card Format
 
 Cards are defined by markdown headings. The heading text is the **Question**, and the content until the next heading of equal or higher level is the **Answer**.
+
+By default (`include_sub_headings = true`), sub-headings are included in the answer and won't become separate cards. Set `include_sub_headings = false` to stop the answer at any next heading — in this case, each heading becomes its own card.
+
+Cards with empty answers (e.g., a heading immediately followed by another heading) are automatically skipped.
 
 #### Tagged Mode (Default)
 Add `#flashcard` to any heading to mark it as a card.

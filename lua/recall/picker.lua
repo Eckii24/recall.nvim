@@ -101,6 +101,7 @@ function M.pick_and_review(opts)
   local decks = scanner.scan(dirs, {
     auto_mode = opts.auto_mode or config.opts.auto_mode,
     min_heading_level = opts.min_heading_level or config.opts.min_heading_level,
+    include_sub_headings = opts.include_sub_headings ~= nil and opts.include_sub_headings or config.opts.include_sub_headings,
   })
 
   -- Filter to decks with at least 1 due card (unless show_all=true)

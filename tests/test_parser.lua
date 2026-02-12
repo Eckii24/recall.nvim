@@ -175,8 +175,8 @@ end
 local function test_empty_answer_between_headings()
   local lines = { "## Q1 #flashcard", "", "## Q2 #flashcard", "", "Has answer." }
   local cards = parser.parse(lines, { auto_mode = false })
-  assert(#cards == 2, "Expected 2 cards, got " .. #cards)
-  assert(cards[1].answer == "", "First card should have empty answer, got: '" .. cards[1].answer .. "'")
+  assert(#cards == 1, "Expected 1 card (empty answer skipped), got " .. #cards)
+  assert(cards[1].question == "Q2", "Only Q2 should remain: " .. cards[1].question)
 end
 
 local function test_subheadings_included_in_answer()
@@ -195,6 +195,106 @@ local function test_default_opts_uses_tagged_mode()
   local lines = { "## Should not match", "", "Text.", "", "## Should match #flashcard", "", "Answer." }
   local cards = parser.parse(lines)
   assert(#cards == 1, "Default should use tagged mode, got " .. #cards)
+end
+
+local function test_include_sub_headings_true_consumes_sub_headings()
+  local lines = {
+    "## Question #flashcard", "",
+    "Answer text.", "",
+    "### Sub-section", "",
+    "Sub detail.", "",
+    "## Next question #flashcard", "",
+    "Next answer.",
+  }
+  local cards = parser.parse(lines, { auto_mode = false, include_sub_headings = true })
+  assert(#cards == 2, "Expected 2 cards, got " .. #cards)
+  assert(cards[1].answer:find("Sub detail") ~= nil, "Answer should include sub-heading content")
+  assert(not cards[1].answer:find("Next answer"), "Answer should not cross to next same-level heading")
+end
+
+local function test_include_sub_headings_false_stops_at_any_heading()
+  local lines = {
+    "## Question #flashcard", "",
+    "Answer text.", "",
+    "### Sub-section", "",
+    "Sub detail.",
+  }
+  local cards = parser.parse(lines, { auto_mode = false, include_sub_headings = false })
+  assert(#cards == 1, "Expected 1 card, got " .. #cards)
+  assert(not cards[1].answer:find("Sub detail"), "Answer should stop at sub-heading: " .. cards[1].answer)
+  assert(cards[1].answer:find("Answer text") ~= nil, "Answer should contain text before sub-heading")
+end
+
+local function test_auto_mode_include_sub_headings_no_duplicate_cards()
+  local lines = {
+    "# Title", "",
+    "## Question One", "",
+    "Answer one.", "",
+    "### Sub heading", "",
+    "Sub content.", "",
+    "## Question Two", "",
+    "Answer two.",
+  }
+  local cards = parser.parse(lines, { auto_mode = true, min_heading_level = 2, include_sub_headings = true })
+  assert(#cards == 2, "Expected 2 cards (sub-heading consumed), got " .. #cards)
+  assert(cards[1].question == "Question One", "First card: " .. cards[1].question)
+  assert(cards[2].question == "Question Two", "Second card: " .. cards[2].question)
+  assert(cards[1].answer:find("Sub content") ~= nil, "First card should include sub-heading content")
+end
+
+local function test_auto_mode_include_sub_headings_false_each_heading_is_card()
+  local lines = {
+    "# Title", "",
+    "## Question One", "",
+    "Answer one.", "",
+    "### Sub heading", "",
+    "Sub content.", "",
+    "## Question Two", "",
+    "Answer two.",
+  }
+  local cards = parser.parse(lines, { auto_mode = true, min_heading_level = 2, include_sub_headings = false })
+  assert(#cards == 3, "Expected 3 cards, got " .. #cards)
+  assert(cards[1].question == "Question One", "First: " .. cards[1].question)
+  assert(cards[2].question == "Sub heading", "Second: " .. cards[2].question)
+  assert(cards[3].question == "Question Two", "Third: " .. cards[3].question)
+  assert(not cards[1].answer:find("Sub content"), "Q1 answer should not include sub content")
+end
+
+local function test_answer_directly_after_heading_no_blank_line()
+  local lines = {
+    "## Question #flashcard",
+    "Answer on next line.",
+    "",
+    "More text.",
+  }
+  local cards = parser.parse(lines, { auto_mode = false })
+  assert(#cards == 1, "Expected 1 card, got " .. #cards)
+  assert(cards[1].answer:find("Answer on next line") ~= nil, "Should capture answer without blank line gap")
+end
+
+local function test_empty_answer_heading_followed_by_sub_heading()
+  local lines = {
+    "## Question", "",
+    "### Sub heading", "",
+    "Content.",
+  }
+  local cards = parser.parse(lines, { auto_mode = true, min_heading_level = 2, include_sub_headings = false })
+  assert(#cards == 1, "Empty answer card should be skipped, got " .. #cards)
+  assert(cards[1].question == "Sub heading", "Only sub heading should remain: " .. cards[1].question)
+end
+
+local function test_tagged_mode_include_sub_headings_false()
+  local lines = {
+    "## Q1 #flashcard", "",
+    "Answer.", "",
+    "### Sub section", "",
+    "Sub content.", "",
+    "## Q2 #flashcard", "",
+    "Answer 2.",
+  }
+  local cards = parser.parse(lines, { auto_mode = false, include_sub_headings = false })
+  assert(#cards == 2, "Expected 2 cards, got " .. #cards)
+  assert(not cards[1].answer:find("Sub content"), "Q1 should not include sub content: " .. cards[1].answer)
 end
 
 local tests = {
@@ -217,6 +317,13 @@ local tests = {
   { "empty answer between headings", test_empty_answer_between_headings },
   { "subheadings included in answer", test_subheadings_included_in_answer },
   { "default opts uses tagged mode", test_default_opts_uses_tagged_mode },
+  { "include_sub_headings true consumes sub-headings", test_include_sub_headings_true_consumes_sub_headings },
+  { "include_sub_headings false stops at any heading", test_include_sub_headings_false_stops_at_any_heading },
+  { "auto mode include_sub_headings no duplicate cards", test_auto_mode_include_sub_headings_no_duplicate_cards },
+  { "auto mode include_sub_headings false each heading is card", test_auto_mode_include_sub_headings_false_each_heading_is_card },
+  { "answer directly after heading no blank line", test_answer_directly_after_heading_no_blank_line },
+  { "empty answer heading followed by sub heading", test_empty_answer_heading_followed_by_sub_heading },
+  { "tagged mode include_sub_headings false", test_tagged_mode_include_sub_headings_false },
 }
 
 local passed, failed = 0, 0

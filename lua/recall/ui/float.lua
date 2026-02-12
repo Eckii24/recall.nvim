@@ -5,6 +5,39 @@ local M = {}
 
 local current_win = nil
 local current_session = nil
+local showing_stats = false
+
+local function should_show_stats(trigger)
+  local setting = config.opts.show_session_stats
+  if setting == "always" then
+    return true
+  end
+  return setting == trigger
+end
+
+local function build_stats_lines(session, trigger)
+  local lines = { "" }
+  local stats = review.session_stats(session)
+  local prog = review.progress(session)
+
+  if trigger == "on_finish" then
+    table.insert(lines, "# Review Complete")
+  else
+    table.insert(lines, "# Session Quit")
+  end
+  table.insert(lines, "")
+
+  table.insert(lines, "**" .. stats.total .. "** of **" .. prog.total .. "** cards reviewed.")
+  table.insert(lines, "")
+  table.insert(lines, "| Rating | Count |")
+  table.insert(lines, "| --- | --- |")
+  table.insert(lines, "| Again | " .. stats.again .. " |")
+  table.insert(lines, "| Hard | " .. stats.hard .. " |")
+  table.insert(lines, "| Good | " .. stats.good .. " |")
+  table.insert(lines, "| Easy | " .. stats.easy .. " |")
+
+  return lines
+end
 
 --- @param session RecallSession
 --- @return string
@@ -23,7 +56,7 @@ local function build_footer(session)
   local rating_keys = config.opts.rating_keys
   local quit_key = config.opts.quit_key
 
-  if review.is_complete(session) then
+  if review.is_complete(session) or showing_stats then
     return {
       { " Any key to close ", "RecallFooter" },
     }
@@ -74,11 +107,18 @@ end
 local function render_buffer(win, session)
   local lines = { "" }
 
-  if review.is_complete(session) then
-    local total = review.progress(session).total
-    table.insert(lines, "# Review Complete")
-    table.insert(lines, "")
-    table.insert(lines, "**" .. total .. "** cards reviewed.")
+  if showing_stats then
+    lines = build_stats_lines(session, showing_stats)
+  elseif review.is_complete(session) then
+    if should_show_stats("on_finish") then
+      showing_stats = "on_finish"
+      lines = build_stats_lines(session, "on_finish")
+    else
+      local total = review.progress(session).total
+      table.insert(lines, "# Review Complete")
+      table.insert(lines, "")
+      table.insert(lines, "**" .. total .. "** cards reviewed.")
+    end
   elseif review.current_card(session) then
     local card = review.current_card(session)
     table.insert(lines, "## " .. card.question)
@@ -125,12 +165,45 @@ local function handle_rate(rating)
   render_buffer(current_win, current_session)
 end
 
-local function handle_quit()
+local function close_window()
   if current_win then
     current_win:close()
     current_win = nil
     current_session = nil
+    showing_stats = false
   end
+end
+
+local function setup_close_keymaps()
+  local buf = current_win.buf
+  for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>", config.opts.quit_key }) do
+    pcall(vim.api.nvim_buf_del_keymap, buf, "n", key)
+    vim.api.nvim_buf_set_keymap(buf, "n", key, "", {
+      noremap = true,
+      silent = true,
+      callback = close_window,
+    })
+  end
+end
+
+local function handle_quit()
+  if not current_session or not current_win then
+    return
+  end
+
+  if showing_stats then
+    close_window()
+    return
+  end
+
+  if should_show_stats("on_quit") and #current_session.results > 0 then
+    showing_stats = "on_quit"
+    render_buffer(current_win, current_session)
+    setup_close_keymaps()
+    return
+  end
+
+  close_window()
 end
 
 local function setup_dynamic_keymaps()
@@ -153,7 +226,7 @@ local function setup_dynamic_keymaps()
     callback = handle_quit,
   })
 
-  if review.is_complete(current_session) then
+  if review.is_complete(current_session) or showing_stats then
     for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>" }) do
       vim.api.nvim_buf_set_keymap(buf, "n", key, "", {
         noremap = true,

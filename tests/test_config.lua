@@ -94,6 +94,17 @@ local function test_setup_with_nil_uses_defaults()
   assert(opts.auto_mode == false, "nil opts should use defaults for auto_mode")
 end
 
+local function test_default_include_sub_headings()
+  local opts = config.setup({})
+  assert(opts.include_sub_headings == true, "Default include_sub_headings should be true")
+end
+
+local function test_default_show_session_stats()
+  local opts = config.setup({})
+  assert(opts.show_session_stats == "always",
+    "Default show_session_stats should be 'always', got " .. opts.show_session_stats)
+end
+
 -- =================================================================
 -- Runner
 -- =================================================================
@@ -114,6 +125,8 @@ local tests = {
   { "setup deep extends rating_keys", test_setup_deep_extends_rating_keys },
   { "setup stores in opts", test_setup_stores_in_opts },
   { "setup with nil uses defaults", test_setup_with_nil_uses_defaults },
+  { "default include_sub_headings", test_default_include_sub_headings },
+  { "default show_session_stats", test_default_show_session_stats },
 }
 
 local passed, failed = 0, 0

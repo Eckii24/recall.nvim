@@ -19,6 +19,7 @@ function M.dispatch(fargs)
       local decks = scanner.scan_cwd({
         auto_mode = config.opts.auto_mode,
         min_heading_level = config.opts.min_heading_level,
+        include_sub_headings = config.opts.include_sub_headings,
       })
 
       local due_decks = {}
@@ -59,6 +60,7 @@ function M.dispatch(fargs)
       local decks = scanner.scan(dirs, {
         auto_mode = config.opts.auto_mode,
         min_heading_level = config.opts.min_heading_level,
+        include_sub_headings = config.opts.include_sub_headings,
       })
 
       local target_deck = nil
@@ -99,6 +101,7 @@ function M.dispatch(fargs)
     local decks = scanner.scan(dirs, {
       auto_mode = config.opts.auto_mode,
       min_heading_level = config.opts.min_heading_level,
+      include_sub_headings = config.opts.include_sub_headings,
     })
 
     local computed_stats = stats.compute(decks)
@@ -120,6 +123,7 @@ function M.dispatch(fargs)
     local decks = scanner.scan(dirs_to_scan, {
       auto_mode = config.opts.auto_mode,
       min_heading_level = config.opts.min_heading_level,
+      include_sub_headings = config.opts.include_sub_headings,
     })
 
     local total_cards = 0
@@ -187,6 +191,7 @@ function M.complete(ArgLead, CmdLine)
     local decks = scanner.scan(dirs, {
       auto_mode = config.opts.auto_mode,
       min_heading_level = config.opts.min_heading_level,
+      include_sub_headings = config.opts.include_sub_headings,
     })
 
     local deck_names = { "." }

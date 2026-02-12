@@ -79,6 +79,10 @@ function M.parse(lines, opts)
   opts = opts or {}
   local auto_mode = opts.auto_mode or false
   local min_heading_level = opts.min_heading_level or 2
+  local include_sub_headings = opts.include_sub_headings
+  if include_sub_headings == nil then
+    include_sub_headings = true
+  end
 
   local cards = {}
   local in_frontmatter = false
@@ -89,103 +93,118 @@ function M.parse(lines, opts)
     in_frontmatter = true
   end
 
-  local i = 1
-  while i <= #lines do
-    local line = lines[i]
+  -- First pass: collect all heading positions and their metadata
+  local headings = {}
+  local fm = in_frontmatter
+  local cb = in_code_block
 
-    -- Handle YAML frontmatter
-    if in_frontmatter then
-      if line == "---" then
-        in_frontmatter = false
+  for idx = 1, #lines do
+    local line = lines[idx]
+
+    if fm then
+      if line == "---" and idx > 1 then
+        fm = false
       end
-      i = i + 1
-      goto continue
+      goto scan_continue
     end
 
-    -- Handle code blocks
     if line:match("^```") then
-      in_code_block = not in_code_block
-      i = i + 1
-      goto continue
+      cb = not cb
+      goto scan_continue
     end
 
-    -- Skip lines inside code blocks
-    if in_code_block then
-      i = i + 1
-      goto continue
+    if cb then
+      goto scan_continue
     end
 
-    -- Try to extract heading
     local level_str, heading_text = line:match("^(#+)%s+(.+)$")
-
     if level_str and heading_text then
-      local heading_level = #level_str
+      table.insert(headings, {
+        line = idx,
+        level = #level_str,
+        text = heading_text,
+      })
+    end
 
-      -- Determine if this heading should become a card
-      local is_flashcard = false
+    ::scan_continue::
+  end
 
-      if auto_mode then
-        -- Auto mode: heading is a card if at or below min_heading_level
-        is_flashcard = heading_level >= min_heading_level
-      else
-        -- Tagged mode: heading must contain #flashcard tag
-        -- Check for #flashcard with word boundaries (not part of another word)
-        if heading_text:match("%s#flashcard%s") or heading_text:match("%s#flashcard$") then
-          is_flashcard = true
-        end
-      end
+  -- Track which headings are consumed as sub-headings of a parent card
+  local consumed = {}
 
-      if is_flashcard then
-        -- Extract question (strip #flashcard tag in tagged mode)
-        local question = heading_text
-        if not auto_mode then
-          question = strip_flashcard_tag(heading_text)
-        end
+  for hi, h in ipairs(headings) do
+    if consumed[hi] then
+      goto card_continue
+    end
 
-        -- Skip cards with empty question (only #flashcard tag)
-        if question:match("^%s*$") then
-          i = i + 1
-          goto continue
-        end
+    local is_flashcard = false
 
-        -- Extract answer: all text until next heading of same or higher level (lower level number)
-        local answer_start = i + 2  -- Next line after heading
-        local answer_end = i + 1    -- Default to current heading if no content
-
-        -- Find the end of answer (next heading of same or higher level)
-        local j = i + 1
-        while j <= #lines do
-          local next_level_str, _ = lines[j]:match("^(#+)%s+")
-          if next_level_str then
-            local next_level = #next_level_str
-            if next_level <= heading_level then
-              answer_end = j - 1
-              break
-            end
-          end
-          if j == #lines then
-            answer_end = #lines
-          end
-          j = j + 1
-        end
-
-        local answer = extract_and_trim_answer(lines, answer_start, answer_end)
-
-        -- Create card
-        local card = {
-          question = question,
-          answer = answer,
-          line_number = i,
-          heading_level = heading_level,
-          id = generate_card_id(question),
-        }
-
-        table.insert(cards, card)
+    if auto_mode then
+      is_flashcard = h.level >= min_heading_level
+    else
+      if h.text:match("%s#flashcard%s") or h.text:match("%s#flashcard$") then
+        is_flashcard = true
       end
     end
 
-    i = i + 1
-    ::continue::
+    if not is_flashcard then
+      goto card_continue
+    end
+
+    local question = h.text
+    if not auto_mode then
+      question = strip_flashcard_tag(h.text)
+    end
+
+    if question:match("^%s*$") then
+      goto card_continue
+    end
+
+    local answer_start = h.line + 1
+    local answer_end
+
+    local next_heading_line = nil
+    for nhi = hi + 1, #headings do
+      local nh = headings[nhi]
+      if include_sub_headings then
+        -- Stop at same or higher level (lower number) heading
+        if nh.level <= h.level then
+          next_heading_line = nh.line
+          break
+        else
+          -- Mark sub-headings as consumed so they don't become separate cards
+          consumed[nhi] = true
+        end
+      else
+        -- Stop at ANY next heading
+        next_heading_line = nh.line
+        break
+      end
+    end
+
+    if next_heading_line then
+      answer_end = next_heading_line - 1
+    else
+      answer_end = #lines
+    end
+
+    local answer = extract_and_trim_answer(lines, answer_start, answer_end)
+
+    if answer == "" then
+      goto card_continue
+    end
+
+    local card = {
+      question = question,
+      answer = answer,
+      line_number = h.line,
+      heading_level = h.level,
+      id = generate_card_id(question),
+    }
+
+    table.insert(cards, card)
+
+    ::card_continue::
   end
 
   return cards

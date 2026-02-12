@@ -288,7 +288,6 @@ local function test_session_uses_deck_filepath()
 end
 
 local function test_rate_all_ratings()
-  -- Ensure all 4 ratings work without error
   local ratings = { "again", "hard", "good", "easy" }
   for _, rating in ipairs(ratings) do
     local deck = make_deck(1)
@@ -297,6 +296,32 @@ local function test_rate_all_ratings()
     assert(ok, "Rating '" .. rating .. "' should not error: " .. tostring(err))
     assert(review.is_complete(session), "Session should be complete after rating 1 card")
   end
+end
+
+local function test_session_stats_counts_ratings()
+  local deck = make_deck(4)
+  local session = review.new_session(deck)
+
+  review.rate(session, "again")
+  review.rate(session, "hard")
+  review.rate(session, "good")
+  review.rate(session, "easy")
+
+  local stats = review.session_stats(session)
+  assert(stats.total == 4, "Total should be 4, got " .. stats.total)
+  assert(stats.again == 1, "Again should be 1, got " .. stats.again)
+  assert(stats.hard == 1, "Hard should be 1, got " .. stats.hard)
+  assert(stats.good == 1, "Good should be 1, got " .. stats.good)
+  assert(stats.easy == 1, "Easy should be 1, got " .. stats.easy)
+end
+
+local function test_session_stats_empty_session()
+  local deck = make_deck(2)
+  local session = review.new_session(deck)
+
+  local stats = review.session_stats(session)
+  assert(stats.total == 0, "Total should be 0, got " .. stats.total)
+  assert(stats.again == 0, "Again should be 0, got " .. stats.again)
 end
 
 -- =================================================================
@@ -322,6 +347,8 @@ local tests = {
   { "progress when complete", test_progress_when_complete },
   { "session uses deck filepath", test_session_uses_deck_filepath },
   { "rate all ratings", test_rate_all_ratings },
+  { "session stats counts ratings", test_session_stats_counts_ratings },
+  { "session stats empty session", test_session_stats_empty_session },
 }
 
 local passed, failed = 0, 0

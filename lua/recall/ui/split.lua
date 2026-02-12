@@ -6,6 +6,39 @@ local M = {}
 local current_buf = nil
 local current_win = nil
 local current_session = nil
+local showing_stats = false
+
+local function should_show_stats(trigger)
+  local setting = config.opts.show_session_stats
+  if setting == "always" then
+    return true
+  end
+  return setting == trigger
+end
+
+local function build_stats_lines(session, trigger)
+  local lines = { "" }
+  local stats = review.session_stats(session)
+  local prog = review.progress(session)
+
+  if trigger == "on_finish" then
+    table.insert(lines, "# Review Complete")
+  else
+    table.insert(lines, "# Session Quit")
+  end
+  table.insert(lines, "")
+
+  table.insert(lines, "**" .. stats.total .. "** of **" .. prog.total .. "** cards reviewed.")
+  table.insert(lines, "")
+  table.insert(lines, "| Rating | Count |")
+  table.insert(lines, "| --- | --- |")
+  table.insert(lines, "| Again | " .. stats.again .. " |")
+  table.insert(lines, "| Hard | " .. stats.hard .. " |")
+  table.insert(lines, "| Good | " .. stats.good .. " |")
+  table.insert(lines, "| Easy | " .. stats.easy .. " |")
+
+  return lines
+end
 
 --- @param session RecallSession
 --- @return string
@@ -14,7 +47,7 @@ local function build_winbar(session)
   local rating_keys = config.opts.rating_keys
   local quit_key = config.opts.quit_key
 
-  if review.is_complete(session) then
+  if review.is_complete(session) or showing_stats then
     return " recall.nvim \u{00b7} " .. deck_name .. " \u{00b7} Complete  %=  Any key to close "
   end
 
@@ -49,11 +82,18 @@ end
 local function render_buffer(buf, session)
   local lines = { "" }
 
-  if review.is_complete(session) then
-    local total = review.progress(session).total
-    table.insert(lines, "# Review Complete")
-    table.insert(lines, "")
-    table.insert(lines, "**" .. total .. "** cards reviewed.")
+  if showing_stats then
+    lines = build_stats_lines(session, showing_stats)
+  elseif review.is_complete(session) then
+    if should_show_stats("on_finish") then
+      showing_stats = "on_finish"
+      lines = build_stats_lines(session, "on_finish")
+    else
+      local total = review.progress(session).total
+      table.insert(lines, "# Review Complete")
+      table.insert(lines, "")
+      table.insert(lines, "**" .. total .. "** cards reviewed.")
+    end
   elseif review.current_card(session) then
     local card = review.current_card(session)
     table.insert(lines, "## " .. card.question)
@@ -100,13 +140,49 @@ local function handle_rate(rating)
   render_buffer(current_buf, current_session)
 end
 
-local function handle_quit()
+local function close_buffer()
   if current_buf and vim.api.nvim_buf_is_valid(current_buf) then
     vim.api.nvim_buf_delete(current_buf, { force = true })
     current_buf = nil
     current_win = nil
     current_session = nil
+    showing_stats = false
   end
+end
+
+local function setup_close_keymaps()
+  local buf = current_buf
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+  for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>", config.opts.quit_key }) do
+    pcall(vim.api.nvim_buf_del_keymap, buf, "n", key)
+    vim.api.nvim_buf_set_keymap(buf, "n", key, "", {
+      noremap = true,
+      silent = true,
+      callback = close_buffer,
+    })
+  end
+end
+
+local function handle_quit()
+  if not current_session or not current_buf then
+    return
+  end
+
+  if showing_stats then
+    close_buffer()
+    return
+  end
+
+  if should_show_stats("on_quit") and #current_session.results > 0 then
+    showing_stats = "on_quit"
+    render_buffer(current_buf, current_session)
+    setup_close_keymaps()
+    return
+  end
+
+  close_buffer()
 end
 
 local function setup_dynamic_keymaps()
@@ -133,7 +209,7 @@ local function setup_dynamic_keymaps()
     callback = handle_quit,
   })
 
-  if review.is_complete(current_session) then
+  if review.is_complete(current_session) or showing_stats then
     for _, key in ipairs({ "1", "2", "3", "4", " ", "<CR>", "<Esc>" }) do
       vim.api.nvim_buf_set_keymap(buf, "n", key, "", {
         noremap = true,
