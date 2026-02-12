@@ -214,13 +214,13 @@ end
 
 local function test_include_sub_headings_false_stops_at_any_heading()
   local lines = {
-    "## Question #flashcard", "",
+    "## Question", "",
     "Answer text.", "",
     "### Sub-section", "",
     "Sub detail.",
   }
-  local cards = parser.parse(lines, { auto_mode = false, include_sub_headings = false })
-  assert(#cards == 1, "Expected 1 card, got " .. #cards)
+  local cards = parser.parse(lines, { auto_mode = true, min_heading_level = 2, include_sub_headings = false })
+  assert(#cards == 2, "Expected 2 cards, got " .. #cards)
   assert(not cards[1].answer:find("Sub detail"), "Answer should stop at sub-heading: " .. cards[1].answer)
   assert(cards[1].answer:find("Answer text") ~= nil, "Answer should contain text before sub-heading")
 end
@@ -283,7 +283,7 @@ local function test_empty_answer_heading_followed_by_sub_heading()
   assert(cards[1].question == "Sub heading", "Only sub heading should remain: " .. cards[1].question)
 end
 
-local function test_tagged_mode_include_sub_headings_false()
+local function test_tagged_mode_ignores_include_sub_headings()
   local lines = {
     "## Q1 #flashcard", "",
     "Answer.", "",
@@ -294,7 +294,30 @@ local function test_tagged_mode_include_sub_headings_false()
   }
   local cards = parser.parse(lines, { auto_mode = false, include_sub_headings = false })
   assert(#cards == 2, "Expected 2 cards, got " .. #cards)
-  assert(not cards[1].answer:find("Sub content"), "Q1 should not include sub content: " .. cards[1].answer)
+  assert(cards[1].answer:find("Sub content") ~= nil,
+    "Tagged mode should include sub content regardless of include_sub_headings: " .. cards[1].answer)
+end
+
+local function test_tagged_mode_stops_at_next_flashcard_tag()
+  local lines = {
+    "## Q1 #flashcard", "",
+    "Answer 1.", "",
+    "### Sub heading", "",
+    "Sub text.", "",
+    "### More content", "",
+    "#### Deep tagged #flashcard", "",
+    "Deep answer.", "",
+    "## Q3 #flashcard", "",
+    "Answer 3.",
+  }
+  local cards = parser.parse(lines, { auto_mode = false })
+  assert(#cards == 3, "Expected 3 cards, got " .. #cards)
+  assert(cards[1].question == "Q1", "First: " .. cards[1].question)
+  assert(cards[1].answer:find("Sub text") ~= nil, "Q1 should include sub heading content")
+  assert(not cards[1].answer:find("Deep answer"), "Q1 should stop at next #flashcard")
+  assert(cards[2].question == "Deep tagged", "Second: " .. cards[2].question)
+  assert(cards[2].answer:find("Deep answer") ~= nil, "Deep tagged answer")
+  assert(cards[3].question == "Q3", "Third: " .. cards[3].question)
 end
 
 local tests = {
@@ -323,7 +346,8 @@ local tests = {
   { "auto mode include_sub_headings false each heading is card", test_auto_mode_include_sub_headings_false_each_heading_is_card },
   { "answer directly after heading no blank line", test_answer_directly_after_heading_no_blank_line },
   { "empty answer heading followed by sub heading", test_empty_answer_heading_followed_by_sub_heading },
-  { "tagged mode include_sub_headings false", test_tagged_mode_include_sub_headings_false },
+  { "tagged mode ignores include_sub_headings", test_tagged_mode_ignores_include_sub_headings },
+  { "tagged mode stops at next flashcard tag", test_tagged_mode_stops_at_next_flashcard_tag },
 }
 
 local passed, failed = 0, 0

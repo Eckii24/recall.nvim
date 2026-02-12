@@ -166,19 +166,28 @@ function M.parse(lines, opts)
     local next_heading_line = nil
     for nhi = hi + 1, #headings do
       local nh = headings[nhi]
-      if include_sub_headings then
-        -- Stop at same or higher level (lower number) heading
-        if nh.level <= h.level then
+      if auto_mode then
+        if include_sub_headings then
+          -- Stop at same or higher level (lower number) heading
+          if nh.level <= h.level then
+            next_heading_line = nh.line
+            break
+          else
+            -- Mark sub-headings as consumed so they don't become separate cards
+            consumed[nhi] = true
+          end
+        else
+          -- Stop at ANY next heading
           next_heading_line = nh.line
           break
-        else
-          -- Mark sub-headings as consumed so they don't become separate cards
-          consumed[nhi] = true
         end
       else
-        -- Stop at ANY next heading
-        next_heading_line = nh.line
-        break
+        -- Tagged mode: stop at same/higher level OR another #flashcard heading
+        local is_tagged = nh.text:match("%s#flashcard%s") or nh.text:match("%s#flashcard$")
+        if nh.level <= h.level or is_tagged then
+          next_heading_line = nh.line
+          break
+        end
       end
     end
 
