@@ -47,15 +47,13 @@ end
 --- @param buf number
 --- @param session RecallSession
 local function render_buffer(buf, session)
-  local lines = {}
+  local lines = { "" }
 
   if review.is_complete(session) then
     local total = review.progress(session).total
-    table.insert(lines, "")
     table.insert(lines, "# Review Complete")
     table.insert(lines, "")
     table.insert(lines, "**" .. total .. "** cards reviewed.")
-    table.insert(lines, "")
   elseif review.current_card(session) then
     local card = review.current_card(session)
     table.insert(lines, "## " .. card.question)
@@ -65,13 +63,12 @@ local function render_buffer(buf, session)
       for _, line in ipairs(answer_lines) do
         table.insert(lines, line)
       end
-      table.insert(lines, "")
     end
   else
-    table.insert(lines, "")
     table.insert(lines, "No cards to review.")
-    table.insert(lines, "")
   end
+
+  table.insert(lines, "")
 
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
@@ -195,6 +192,9 @@ function M.start(session)
   vim.wo[win].wrap = true
   vim.wo[win].cursorline = false
   vim.wo[win].signcolumn = "no"
+  vim.wo[win].list = true
+  vim.wo[win].listchars = "eol: "
+  vim.wo[win].statuscolumn = " "
 
   current_buf = buf
   current_win = win

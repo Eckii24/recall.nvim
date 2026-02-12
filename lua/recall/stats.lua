@@ -111,7 +111,7 @@ end
 
 --- @param stats RecallStats
 function M.display(stats)
-  local lines = {}
+  local lines = { "" }
 
   table.insert(lines, "# Statistics")
   table.insert(lines, "")
@@ -134,6 +134,8 @@ function M.display(stats)
       table.insert(lines, "| " .. deck_summary.name .. " | " .. deck_summary.due .. " | " .. deck_summary.total .. " |")
     end
   end
+
+  table.insert(lines, "")
 
   local ok, Snacks = pcall(require, "snacks")
   if ok and Snacks.win then
@@ -163,6 +165,10 @@ function M.display(stats)
         ["<Esc>"] = "close",
       },
     })
+
+    if win.add_padding then
+      win:add_padding()
+    end
 
     vim.bo[win.buf].modifiable = true
     vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, lines)

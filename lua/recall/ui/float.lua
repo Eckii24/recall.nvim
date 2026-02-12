@@ -72,15 +72,13 @@ end
 --- @param win table
 --- @param session RecallSession
 local function render_buffer(win, session)
-  local lines = {}
+  local lines = { "" }
 
   if review.is_complete(session) then
     local total = review.progress(session).total
-    table.insert(lines, "")
     table.insert(lines, "# Review Complete")
     table.insert(lines, "")
     table.insert(lines, "**" .. total .. "** cards reviewed.")
-    table.insert(lines, "")
   elseif review.current_card(session) then
     local card = review.current_card(session)
     table.insert(lines, "## " .. card.question)
@@ -90,13 +88,12 @@ local function render_buffer(win, session)
       for _, line in ipairs(answer_lines) do
         table.insert(lines, line)
       end
-      table.insert(lines, "")
     end
   else
-    table.insert(lines, "")
     table.insert(lines, "No cards to review.")
-    table.insert(lines, "")
   end
+
+  table.insert(lines, "")
 
   vim.bo[win.buf].modifiable = true
   vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, lines)
@@ -227,6 +224,10 @@ function M.start(session)
       winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder,FloatTitle:RecallTitle,FloatFooter:RecallFooter",
     },
   })
+
+  if win.add_padding then
+    win:add_padding()
+  end
 
   current_win = win
   render_buffer(win, session)
