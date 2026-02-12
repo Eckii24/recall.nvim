@@ -123,6 +123,9 @@ function M.pick_and_review(opts)
     if review_mode == "split" then
       local ui_split = require("recall.ui.split")
       ui_split.start(session)
+    elseif review_mode == "buffer" then
+      local ui_buffer = require("recall.ui.buffer")
+      ui_buffer.start(session)
     else
       local ui_float = require("recall.ui.float")
       ui_float.start(session)

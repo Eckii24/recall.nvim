@@ -18,7 +18,7 @@ local defaults = {
     show_answer = "<Space>",
     quit = "q",
   },
-  review_mode = "float",          -- "float" | "split"
+  review_mode = "float",          -- "float" | "split" | "buffer"
   initial_ease = 2.5,
   show_session_stats = "always",  -- "always" | "on_finish" | "on_quit" | "never"
 }
