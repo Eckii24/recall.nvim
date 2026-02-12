@@ -74,9 +74,12 @@ function M.pick_deck(decks, on_select)
         end,
       }
     end,
-    confirm = function(_, item)
+    confirm = function(picker, item)
+      picker:close()
       if item and item.deck then
-        on_select(item.deck)
+        vim.schedule(function()
+          on_select(item.deck)
+        end)
       end
     end,
   })

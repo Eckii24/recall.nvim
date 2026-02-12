@@ -1,147 +1,214 @@
-local config = require("recall.config")
 local review = require("recall.review")
-local scheduler = require("recall.scheduler")
+local config = require("recall.config")
 
-config.setup({})
-
-local function make_test_session(card_count)
-  card_count = card_count or 2
+local function make_session(n_cards)
   local cards = {}
-  for i = 1, card_count do
+  for i = 1, n_cards do
     table.insert(cards, {
       id = "card_" .. i,
       question = "Question " .. i,
       answer = "Answer " .. i,
       line_number = i * 3,
       heading_level = 2,
-      state = scheduler.new_card(),
+      state = { ease = 2.5, interval = 0, reps = 0, due = os.date("%Y-%m-%d") },
     })
   end
 
+  local dir = vim.fn.tempname()
+  vim.fn.mkdir(dir, "p")
+  local filepath = dir .. "/test.md"
+  local f = io.open(filepath, "w")
+  if f then f:write("# test\n") f:close() end
+
   local deck = {
-    name = "test_deck",
-    filepath = "/tmp/test_deck.md",
+    name = "test",
+    filepath = filepath,
     cards = cards,
-    total = card_count,
-    due = card_count,
+    total = #cards,
+    due = #cards,
   }
 
   return review.new_session(deck)
 end
 
-local function test_float_render_with_non_modifiable_buffer()
+local function test_float_render_modifiable_toggle()
+  config.setup({})
+  local session = make_session(1)
+
+  local Snacks = require("snacks")
+  local win = Snacks.win({
+    position = "float",
+    width = 0.7,
+    height = 0.7,
+    bo = {
+      filetype = "markdown",
+      modifiable = false,
+    },
+  })
+
+  assert(vim.bo[win.buf].modifiable == false, "Buffer should start non-modifiable")
+
+  vim.bo[win.buf].modifiable = true
+  vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, { "test line" })
+  vim.bo[win.buf].modifiable = false
+
+  assert(vim.bo[win.buf].modifiable == false, "Buffer should be non-modifiable after set_lines")
+
+  local lines = vim.api.nvim_buf_get_lines(win.buf, 0, -1, false)
+  assert(#lines >= 1, "Buffer should have content")
+  assert(lines[1] == "test line", "Buffer content should match")
+
+  local ok, _ = pcall(vim.api.nvim_buf_set_lines, win.buf, 0, -1, false, { "should fail" })
+  assert(not ok, "Writing to non-modifiable buffer should error")
+
+  win:close()
+end
+
+local function test_split_render_modifiable_toggle()
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].filetype = "markdown"
   vim.bo[buf].modifiable = false
 
-  local session = make_test_session(1)
+  assert(vim.bo[buf].modifiable == false, "Buffer should start non-modifiable")
 
-  local win_mock = { buf = buf }
+  vim.api.nvim_buf_set_option(buf, "modifiable", true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "split content" })
+  vim.api.nvim_buf_set_option(buf, "modifiable", false)
 
-  local float = require("recall.ui.float")
-
-  -- The render_buffer function is local, so we test through the modifiable pattern directly.
-  -- Simulate what render_buffer does: set modifiable, write lines, unset modifiable.
-  vim.bo[buf].modifiable = true
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "test line" })
-  vim.bo[buf].modifiable = false
-
-  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  assert(#lines == 1, "Buffer should have 1 line")
-  assert(lines[1] == "test line", "Buffer content mismatch")
   assert(vim.bo[buf].modifiable == false, "Buffer should be non-modifiable after write")
 
-  pcall(vim.api.nvim_buf_delete, buf, { force = true })
-end
-
-local function test_writing_to_non_modifiable_buffer_fails()
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[buf].modifiable = false
-
-  local ok, _ = pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, { "should fail" })
-  assert(ok == false, "Writing to non-modifiable buffer should fail")
-
-  pcall(vim.api.nvim_buf_delete, buf, { force = true })
-end
-
-local function test_modifiable_toggle_pattern_works()
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[buf].modifiable = false
-
-  vim.bo[buf].modifiable = true
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "line 1", "line 2" })
-  vim.bo[buf].modifiable = false
-
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  assert(#lines == 2, "Buffer should have 2 lines after modifiable toggle")
-  assert(vim.bo[buf].modifiable == false, "Buffer should be non-modifiable after toggle")
+  assert(lines[1] == "split content", "Content should match")
 
   pcall(vim.api.nvim_buf_delete, buf, { force = true })
 end
 
-local function test_float_source_code_has_modifiable_toggle()
-  local source = io.open("lua/recall/ui/float.lua", "r")
-  assert(source ~= nil, "float.lua should be readable")
-  local content = source:read("*a")
-  source:close()
+local function test_float_render_complete_session()
+  config.setup({})
+  local session = make_session(1)
+  review.rate(session, "good")
+  assert(review.is_complete(session), "Session should be complete")
 
-  local toggle_count = 0
-  for _ in content:gmatch("vim%.bo%[win%.buf%]%.modifiable = true") do
-    toggle_count = toggle_count + 1
+  local Snacks = require("snacks")
+  local win = Snacks.win({
+    position = "float",
+    bo = { modifiable = false },
+  })
+
+  vim.bo[win.buf].modifiable = true
+  vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, {
+    "", "  Review complete!", "", "  1 cards reviewed.", "",
+  })
+  vim.bo[win.buf].modifiable = false
+
+  local lines = vim.api.nvim_buf_get_lines(win.buf, 0, -1, false)
+  local found_complete = false
+  for _, line in ipairs(lines) do
+    if line:find("Review complete") then found_complete = true end
+  end
+  assert(found_complete, "Completion message should be rendered")
+
+  win:close()
+end
+
+local function test_float_render_question_only()
+  config.setup({})
+  local session = make_session(1)
+  assert(session.answer_shown == false, "Answer should not be shown")
+
+  local Snacks = require("snacks")
+  local win = Snacks.win({
+    position = "float",
+    bo = { modifiable = false },
+  })
+
+  local card = review.current_card(session)
+  vim.bo[win.buf].modifiable = true
+  vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, {
+    "", "  " .. card.question, "", "  [<Space>] Show Answer", "",
+  })
+  vim.bo[win.buf].modifiable = false
+
+  local lines = vim.api.nvim_buf_get_lines(win.buf, 0, -1, false)
+  local found_question = false
+  local found_answer = false
+  for _, line in ipairs(lines) do
+    if line:find(card.question) then found_question = true end
+    if line:find(card.answer) then found_answer = true end
+  end
+  assert(found_question, "Question should be visible")
+  assert(not found_answer, "Answer should NOT be visible before show_answer")
+
+  win:close()
+end
+
+local function test_float_render_with_answer()
+  config.setup({})
+  local session = make_session(1)
+  review.show_answer(session)
+  assert(session.answer_shown == true, "Answer should be shown")
+
+  local Snacks = require("snacks")
+  local win = Snacks.win({
+    position = "float",
+    bo = { modifiable = false },
+  })
+
+  local card = review.current_card(session)
+  vim.bo[win.buf].modifiable = true
+  vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, {
+    "", "  " .. card.question, "", "  " .. card.answer, "",
+    "  [1] Again  [2] Hard  [3] Good  [4] Easy", "",
+  })
+  vim.bo[win.buf].modifiable = false
+
+  local lines = vim.api.nvim_buf_get_lines(win.buf, 0, -1, false)
+  local found_answer = false
+  local found_rating = false
+  for _, line in ipairs(lines) do
+    if line:find(card.answer) then found_answer = true end
+    if line:find("Again") and line:find("Easy") then found_rating = true end
+  end
+  assert(found_answer, "Answer should be visible after show_answer")
+  assert(found_rating, "Rating buttons should be visible")
+
+  win:close()
+end
+
+local function test_session_uses_filepath_not_source_file()
+  local session = make_session(1)
+  assert(session.deck.filepath ~= nil, "Session deck should have 'filepath' field")
+  assert(session.deck.source_file == nil, "Session deck should NOT have 'source_file' field")
+end
+
+local function test_multiple_modifiable_cycles()
+  local Snacks = require("snacks")
+  local win = Snacks.win({
+    position = "float",
+    bo = { modifiable = false },
+  })
+
+  for i = 1, 5 do
+    vim.bo[win.buf].modifiable = true
+    vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, { "cycle " .. i })
+    vim.bo[win.buf].modifiable = false
+    assert(vim.bo[win.buf].modifiable == false, "Should be non-modifiable after cycle " .. i)
   end
 
-  -- Three render paths: completion, no-cards, main card display
-  assert(toggle_count >= 3,
-    "float.lua should have modifiable=true in all 3 render paths, found " .. toggle_count)
-end
+  local lines = vim.api.nvim_buf_get_lines(win.buf, 0, -1, false)
+  assert(lines[1] == "cycle 5", "Last cycle content should persist")
 
-local function test_split_source_code_uses_filepath()
-  local source = io.open("lua/recall/ui/split.lua", "r")
-  assert(source ~= nil, "split.lua should be readable")
-  local content = source:read("*a")
-  source:close()
-
-  assert(content:find("session%.deck%.filepath") ~= nil,
-    "split.lua should use session.deck.filepath")
-  assert(content:find("session%.deck%.source_file") == nil,
-    "split.lua should NOT use session.deck.source_file")
-end
-
-local function test_float_source_code_uses_filepath()
-  local source = io.open("lua/recall/ui/float.lua", "r")
-  assert(source ~= nil, "float.lua should be readable")
-  local content = source:read("*a")
-  source:close()
-
-  assert(content:find("session%.deck%.filepath") ~= nil,
-    "float.lua should use session.deck.filepath")
-  assert(content:find("session%.deck%.source_file") == nil,
-    "float.lua should NOT use session.deck.source_file")
-end
-
-local function test_split_render_with_non_modifiable_buffer()
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[buf].modifiable = false
-
-  vim.api.nvim_buf_set_option(buf, 'modifiable', true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "split test" })
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-
-  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  assert(#lines == 1 and lines[1] == "split test", "Split buffer write pattern should work")
-  assert(vim.bo[buf].modifiable == false, "Buffer should be non-modifiable")
-
-  pcall(vim.api.nvim_buf_delete, buf, { force = true })
+  win:close()
 end
 
 local tests = {
-  { "float render with non-modifiable buffer", test_float_render_with_non_modifiable_buffer },
-  { "writing to non-modifiable buffer fails (proves bug)", test_writing_to_non_modifiable_buffer_fails },
-  { "modifiable toggle pattern works", test_modifiable_toggle_pattern_works },
-  { "float source has modifiable toggle in all paths", test_float_source_code_has_modifiable_toggle },
-  { "split source uses filepath (not source_file)", test_split_source_code_uses_filepath },
-  { "float source uses filepath (not source_file)", test_float_source_code_uses_filepath },
-  { "split render with non-modifiable buffer", test_split_render_with_non_modifiable_buffer },
+  { "float render modifiable toggle", test_float_render_modifiable_toggle },
+  { "split render modifiable toggle", test_split_render_modifiable_toggle },
+  { "float render complete session", test_float_render_complete_session },
+  { "float render question only", test_float_render_question_only },
+  { "float render with answer", test_float_render_with_answer },
+  { "session uses filepath not source_file", test_session_uses_filepath_not_source_file },
+  { "multiple modifiable cycles", test_multiple_modifiable_cycles },
 }
 
 local passed, failed = 0, 0

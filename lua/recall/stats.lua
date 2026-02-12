@@ -156,6 +156,7 @@ function M.display(stats)
       title_pos = "center",
     })
 
+    vim.bo[win.buf].modifiable = true
     vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, lines)
     vim.bo[win.buf].modifiable = false
     vim.bo[win.buf].filetype = "markdown"
